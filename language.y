@@ -1,7 +1,7 @@
 %{
 #include <stdio.h>
-extern FILE* yyin;
-extern char* yytext;
+extern FILE * yyin;
+extern char * yytext;
 extern int yylineno;
 %}
 %token ID TIP BGIN END ASSIGN NR 
@@ -9,6 +9,15 @@ extern int yylineno;
 %%
 progr: declaratii bloc {printf("program corect sintactic\n");}
      ;
+
+data_type : TRIVIAL_TIP
+          | SIGN_TIP
+          | TIP_SIGN SIGN_TIP
+          ;
+
+struct_dec : STRUCT { LIST_PART } ';'
+          | STRUCT { LIST_PART } ID ';'
+          | TYPEDEF STRUCT { LIST_PART } ID ';'
 
 declaratii :  declaratie ';'
 	   | declaratii declaratie ';'
