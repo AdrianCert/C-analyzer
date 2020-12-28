@@ -8,8 +8,19 @@ void yyerror(char * s)
 {
      printf("eroare: %s la linia:%d\n",s,yylineno);
 }
+
 %}
-%token ID TIP BGIN END ASSIGN NR 
+
+%token SIGN_TIP TRIVIAL_TIP TIP_SIGN ID 
+%token BOOL_VAL CHAR_VAL STRING_VAL INT_VAL DOUBLE_VAL
+%token ASSIGN MUL_ASSIGN MOD_ASSIGN ADD_ASSIGN MIN_ASSIGN DIV_ASSIGN
+%token EQUAL NOT_EQ LOWER_EQ GREATER_EQ GREATER LOWER
+%token INCR DECR
+%token CONST STATIC PRINT PMEM
+%token ADD MIN MUL OR AND NOT DIV MOD
+%token RETURN IF ELSE WHILE DO FOR
+%token STRUCT CLASS ACCESMODIF
+
 %start begin
 
 %%
@@ -34,8 +45,8 @@ variable_idendifier : ID
           | variable_idendifier ',' ID
           ;
 
-variable_dec : data_type variable_idendifier ';'
-          | data_type ID ASSIGN expr ';'
+variable_dec : data_type variable_idendifier ';' //{ printf("%s, $1"); }
+          | data_type ID ASSIGN expr ';' //{ printf("%s, $1"); }
           ;
 
 statement : variable_dec
@@ -83,15 +94,15 @@ asign_statement : ref_val ASSIGN expr ';'
 /**************************************************************/
 
 loop_init : statement 
-          | ''
+          |
           ;
 
 stop_cond : lo_expr
-          | ''
+          |
           ;
 
 loop_step : expr
-          | ''
+          |
           ;
 
 for_statement : FOR '(' loop_init ';' stop_cond ';' loop_step ')' block ;
@@ -116,11 +127,6 @@ if_statement : IF '(' lo_expr ')' block
 /**************** EXPRESIONS RULES ****************************/
 /**************************************************************/
 
-operand : ref_val
-          | const_value
-          | expr
-          ;
-
 lo_operand : ref_val
           | BOOL_VAL
           | function_call
@@ -137,11 +143,6 @@ lo_expr : NOT lo_expr
           | arhimetic_expr NOT_EQ arhimetic_expr
           | arhimetic_expr LOWER_EQ arhimetic_expr
           | arhimetic_expr GREATER_EQ arhimetic_expr
-          ;
-
-value : const_value
-          | ref_val
-          | function_call
           ;
 
 arhimetic_operand : INCR ref_val
@@ -213,7 +214,7 @@ function  : function_dec
 /**************** STRUCT && CLASS RULES ***********************/
 /**************************************************************/
 
-acces_modifier : ACCMDF ':' ;
+acces_modifier : ACCESMODIF ':' ;
 
 member_declarations : variable_dec
           | STATIC variable_dec
