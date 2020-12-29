@@ -1,7 +1,7 @@
 %{
 #include <stdio.h>
-// #include <stdlib.h>
-// #include <string.h>
+#include <stdlib.h>
+#include <string.h>
 #include "language.tab.h"
 %}
 
@@ -15,19 +15,35 @@
 ("bool"|"void"|"wchar_t"|"float")   { return TRIVIAL_TIP;}
 ("private"|"protected"|"public")    { return ACCESMODIF;}
 ("signed"|"unsigned")   { return TIP_SIGN;}
-("false"|"true"|[01])   { return BOOL_VAL;}
-(0|[+-]?[1-9][0-9]*)    { return INT_VAL;}
-([0-9]*[.])?[0-9]+      { return DOUBLE_VAL;}
-[_a-zA-Z][_a-zA-Z0-9]*  { return ID; }
+("false"|"true"|[01])   {
+                            if( strcmp(yytext, "false") == 0) {
+                                yylval = 0;
+                            } else if( strcmp(yytext, "true") == 0) {
+                                yylval = 1;
+                            } else {
+                                yylval = atoi(yytext);
+                            }
+                            printf("bool %d", yylval);
+                            return BOOL_VAL;
+                        }
+([0-9]*[.])?[0-9]+      {
+                            printf("l double\n");
+                            return DOUBLE_VAL;
+                        }
+(0|[+-]?[1-9][0-9]*)    {
+                            yylval = atoi(yytext);
+                            printf("int %d", yylval);
+                            return INT_VAL;
+                        }
 "="                     { return ASSIGN; }
 "*="                    { return MUL_ASSIGN; }
 "%="                    { return MOD_ASSIGN; }
 "+="                    { return ADD_ASSIGN; }
 "-="                    { return MIN_ASSIGN; }
 "/="                    { return DIV_ASSIGN; }
-"struct"                { return STRUCT; }
 ">"                     { return GREATER; }
 "<"                     { return LOWER; }
+"->"                    { return PMEM; }
 "++"                    { return INCR; }
 "--"                    { return DECR; }
 "=="                    { return EQUAL; }
@@ -37,14 +53,14 @@
 "+"                     { return ADD; }
 "-"                     { return MIN; }
 "*"                     { return MUL; }
+"\/"                    { return DIV; }
+"%"                     { return MOD; }
+"!"                     { return NOT; }
 "||"|"or"               { return OR; }
 "&&"|"and"              { return AND; }
-"!"                     { return NOT; }
-"div"                   { return DIV; }
-"%"                     { return MOD; }
+"struct"                { return STRUCT; }
 "const"                 { return CONST; }
 "static"                { return STATIC; }
-"->"                    { return PMEM; }
 "print"                 { return PRINT; }
 "if"                    { return IF; }
 "else"                  { return ELSE; }
@@ -52,8 +68,11 @@
 "do"                    { return DO; }
 "for"                   { return FOR; }
 "return"                { return RETURN; }
+"eval"                  { return EVAL; }
+"calc"                  { return CALC; }
 "class"                 { return CLASS; }
-['""].['"]              { return CHAR_VAL; }
+[_a-zA-Z][_a-zA-Z0-9]*  { return ID; }
+['"].['"]               { return CHAR_VAL; }
 (["].*["])              { return STRING_VAL; }
 [ \t]                   ;
 \n                      { yylineno++; }

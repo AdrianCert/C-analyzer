@@ -1,5 +1,8 @@
 %{
 #include <stdio.h>
+
+int yylex();
+
 extern FILE * yyin;
 extern char * yytext;
 extern int yylineno;
@@ -16,6 +19,7 @@ void yyerror(char * s)
 %token ASSIGN MUL_ASSIGN MOD_ASSIGN ADD_ASSIGN MIN_ASSIGN DIV_ASSIGN
 %token EQUAL NOT_EQ LOWER_EQ GREATER_EQ GREATER LOWER
 %token INCR DECR
+%token EVAL CALC
 %token CONST STATIC PRINT PMEM
 %token ADD MIN MUL OR AND NOT DIV MOD
 %token RETURN IF ELSE WHILE DO FOR
@@ -29,16 +33,16 @@ void yyerror(char * s)
 /**************** GLOBAL RULES ********************************/
 /**************************************************************/
 
-data_type : TRIVIAL_TIP
-          | SIGN_TIP
-          | TIP_SIGN SIGN_TIP
+data_type : TRIVIAL_TIP { printf("Fc %c", $1);}
+          | SIGN_TIP { printf("Fc %c", $1);}
+          | TIP_SIGN SIGN_TIP { printf("Fc %c", $2);}
           ;
 
-const_value : INT_VAL
-          | CHAR_VAL
-          | STRING_VAL
-          | BOOL_VAL
-          | DOUBLE_VAL
+const_value : INT_VAL { printf("y int reg %d \n", $1); $$ = $1; }
+          | CHAR_VAL { printf("y char\n"); }
+          | STRING_VAL { printf("y string\n"); }
+          | BOOL_VAL { printf("y bool\n"); }
+          | DOUBLE_VAL { printf("y double\n"); }
           ;
 
 variable_idendifier : ID
@@ -56,6 +60,7 @@ statement : variable_dec
           | while_statement
           | dowhile_statement
           | asign_statement
+          | eval_statement
           ;
 
 statement_list : statement
@@ -81,13 +86,21 @@ block : '{' block_body '}'
           | statement
           ;
 
-asign_statement : ref_val ASSIGN expr ';' 
+asign_statement : ref_val ASSIGN expr ';'
           | ref_val MUL_ASSIGN expr ';' 
           | ref_val MOD_ASSIGN expr ';' 
           | ref_val ADD_ASSIGN expr ';' 
           | ref_val MIN_ASSIGN expr ';' 
           | ref_val DIV_ASSIGN expr ';' 
           ;
+
+/**************************************************************/
+/**************** EVAL & CALC RULES ***************************/
+/**************************************************************/
+
+eval_statement : EVAL '(' '"' arhimetic_expr '"'')' ';' { printf("ok"); }
+
+calc_statement : CALC '(' '"' arhimetic_expr '"' ')' ';' { $$ = $4; }
 
 /**************************************************************/
 /**************** FOR RULES ***********************************/
@@ -127,34 +140,34 @@ if_statement : IF '(' lo_expr ')' block
 /**************** EXPRESIONS RULES ****************************/
 /**************************************************************/
 
-lo_operand : ref_val
-          | BOOL_VAL
+lo_operand : ref_val { $$ = $1; }
+          | BOOL_VAL { $$ = $1; }
           | function_call
-          | lo_expr
+          | lo_expr { $$ = $1; }
           ;
 
-lo_expr : NOT lo_expr 
-          | lo_expr AND lo_expr
-          | lo_expr OR lo_expr
-          | lo_operand
-          | arhimetic_expr GREATER arhimetic_expr
-          | arhimetic_expr LOWER arhimetic_expr
-          | arhimetic_expr EQUAL arhimetic_expr
-          | arhimetic_expr NOT_EQ arhimetic_expr
-          | arhimetic_expr LOWER_EQ arhimetic_expr
-          | arhimetic_expr GREATER_EQ arhimetic_expr
+lo_expr : NOT lo_expr { $$ = !$2; }
+          | lo_expr AND lo_expr { $$ = $1 && $3; }
+          | lo_expr OR lo_expr { $$ = $1 || $3; }
+          | lo_operand { $$ = $1; }
+          | arhimetic_expr GREATER arhimetic_expr { $$ = $1 > $3; }
+          | arhimetic_expr LOWER arhimetic_expr { $$ = $1 < $3; }
+          | arhimetic_expr EQUAL arhimetic_expr { $$ = $1 == $3; }
+          | arhimetic_expr NOT_EQ arhimetic_expr { $$ = $1 != $3; }
+          | arhimetic_expr LOWER_EQ arhimetic_expr { $$ = $1 <= $3; }
+          | arhimetic_expr GREATER_EQ arhimetic_expr { $$ = $1 >= $3; }
           ;
 
-arhimetic_operand : INCR ref_val
-          | ref_val
-          | ref_val INCR
-          | ref_val DECR
-          | DECR ref_val
-          | const_value
-          | const_value INCR
-          | const_value DECR
-          | INCR const_value
-          | DECR const_value
+arhimetic_operand : INCR ref_val { $$ = ++$2; }
+          | ref_val { $$ = $1; }
+          | ref_val INCR { $$ = $1++; }
+          | ref_val DECR { $$ = $1--; }
+          | DECR ref_val { $$ = --$1; }
+          | const_value { $$ = $1; }
+          | const_value INCR { $$ = $1++; }
+          | const_value DECR { $$ = $1--; }
+          | INCR const_value { $$ = ++$1; }
+          | DECR const_value { $$ = --$1; }
           | function_call
           | function_call INCR
           | function_call DECR
@@ -162,18 +175,19 @@ arhimetic_operand : INCR ref_val
           | DECR function_call
           ;
 
-arhimetic_expr : arhimetic_operand
-          | arhimetic_expr ADD arhimetic_expr
-          | arhimetic_expr MIN arhimetic_expr
-          | arhimetic_expr MUL arhimetic_expr
-          | arhimetic_expr DIV arhimetic_expr
-          | arhimetic_expr MOD arhimetic_expr
+arhimetic_expr : arhimetic_operand { $$ = $1; }
+          | arhimetic_expr ADD arhimetic_expr { $$ = $1 + $3; }
+          | arhimetic_expr MIN arhimetic_expr { $$ = $1 - $3; }
+          | arhimetic_expr MUL arhimetic_expr { $$ = $1 * $3; }
+          | arhimetic_expr DIV arhimetic_expr { $$ = $1 / $3; }
+          | arhimetic_expr MOD arhimetic_expr { $$ = $1 % $3; }
 
-expr : lo_expr
-          | arhimetic_expr
+expr : lo_expr { $$ = $1; }
+          | arhimetic_expr { $$ = $1; }
           | function_call
-          | const_value
-          | ref_val
+          | const_value { $$ = $1; }
+          | ref_val { $$ = $1; }
+          | calc_statement
           ;
 
 /**************************************************************/

@@ -1,0 +1,6 @@
+struct Figure {
+    int x;
+    bool visible = false;
+    int y = 1;
+    int type = 0;
+} f1, f2;
