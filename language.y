@@ -1,16 +1,20 @@
 %{
-#include <stdio.h>
+     #include <stdio.h>
 
-int yylex();
+     int yylex();
 
-extern FILE * yyin;
-extern char * yytext;
-extern int yylineno;
+     extern FILE * yyin;
+     extern char * yytext;
+     extern int yylineno;
 
-void yyerror(char * s)
-{
-     printf("eroare: %s la linia:%d\n",s,yylineno);
-}
+     struct vartable {
+          char type[25]; 
+     }
+
+     void yyerror(char * s)
+     {
+          printf("eroare: %s la linia:%d\n",s,yylineno);
+     }
 
 %}
 
@@ -23,7 +27,9 @@ void yyerror(char * s)
 %token RETURN IF ELSE WHILE DO FOR
 %token STRUCT CLASS ACCESMODIF
 
-%left ADD MIN MUL OR AND NOT DIV MOD
+%left OR AND NOT
+%left MUL DIV MOD
+%left ADD MIN
 %left INCR DECR
 
 %union
@@ -34,7 +40,7 @@ void yyerror(char * s)
 }
 
 %type <str> SIGN_TIP ID TRIVIAL_TIP CHAR_VAL STRING_VAL
-%type <d> BOOL_VAL INT_VAL lo_expr lo_operand lo_expr_r
+%type <num> BOOL_VAL INT_VAL lo_expr lo_operand
 %type <rnum> DOUBLE_VAL arhimetic_expr expr ref_val const_value function_call calc_statement arhimetic_operand arhimetic_expr_r
 
 %start begin
@@ -45,9 +51,9 @@ void yyerror(char * s)
 /**************** GLOBAL RULES ********************************/
 /**************************************************************/
 
-data_type : TRIVIAL_TIP { printf("Fc %c", $1);}
-          | SIGN_TIP { printf("Fc %c", $1);}
-          | TIP_SIGN SIGN_TIP { printf("Fc %c", $2);}
+data_type : TRIVIAL_TIP { printf("Fc %s", $1);}
+          | SIGN_TIP { printf("Fc %s", $1);}
+          | TIP_SIGN SIGN_TIP { printf("Fc %s", $2);}
           ;
 
 const_value : INT_VAL { printf("y int reg %d \n", $1); $$ = $1; }
@@ -57,7 +63,10 @@ const_value : INT_VAL { printf("y int reg %d \n", $1); $$ = $1; }
           | DOUBLE_VAL { printf("y double\n"); }
           ;
 
-variable_idendifier : ID
+variable_idendifier : ID {
+                              char srt[100];
+                             // strcmd$$ = 
+                         }
           | variable_idendifier ',' ID
           ;
 
@@ -151,17 +160,15 @@ if_statement : IF '(' lo_expr ')' block
 /**************************************************************/
 
 lo_operand : BOOL_VAL { $$ = $1; }
+          | lo_expr;
           ;
 
-lo_expr_r : lo_expr ;
-
-// lo_expr_l : lo_expr ;
-
-lo_expr : NOT lo_expr_r { $$ = !$2; }
-          | lo_expr AND lo_expr_r { $$ = $1 && $3; }
-          | lo_expr OR lo_expr_r { $$ = $1 || $3; }
+lo_expr : NOT lo_operand { $$ = !$2; }
+          | lo_operand AND lo_operand { $$ = $1 && $3; }
+          | lo_operand OR lo_operand { $$ = $1 || $3; }
           | lo_operand { $$ = $1; }
-          | arhimetic_expr GREATER arhimetic_expr_r { $$ = $1 > $3; }
+          | '(' lo_expr ')' { $$ = $2; }
+          | arhimetic_expr GREATER arhimetic_expr { $$ = $1 > $3; }
           | arhimetic_expr LOWER arhimetic_expr_r { $$ = $1 < $3; }
           | arhimetic_expr EQUAL arhimetic_expr_r { $$ = $1 == $3; }
           | arhimetic_expr NOT_EQ arhimetic_expr_r { $$ = $1 != $3; }
@@ -174,7 +181,7 @@ arhimetic_operand : INCR ref_val { $$ = ++$2; }
           | ref_val INCR { $$ = $1++; }
           | ref_val DECR { $$ = $1--; }
           | DECR ref_val { $$ = --$2; }
-          | const_value { $$ = $1; }
+          | const_value { $$ = $1; } ;
           | const_value INCR { $$ = $1++; }
           | const_value DECR { $$ = $1--; }
           | INCR const_value { $$ = ++$2; }
@@ -195,16 +202,17 @@ arhimetic_expr_r: '(' arhimetic_expr ')' { $$ = $2; }
 //           ;
 
 arhimetic_expr : arhimetic_operand { $$ = $1; }
+          | '(' arhimetic_expr ')' { $$ = $2; }
           | arhimetic_expr ADD arhimetic_expr { $$ = $1 + $3; }
           | arhimetic_expr MIN arhimetic_expr { $$ = $1 - $3; }
           | arhimetic_expr MUL arhimetic_expr { $$ = $1 * $3; }
           | arhimetic_expr DIV arhimetic_expr { $$ = $1 / $3; }
-          | arhimetic_expr MOD arhimetic_expr { $$ = $1 % $3; }
-          | '(' arhimetic_expr ADD arhimetic_expr ')' { $$ = $2 + $4; }
-          | '(' arhimetic_expr MIN arhimetic_expr ')' { $$ = $2 - $4; }
-          | '(' arhimetic_expr MUL arhimetic_expr ')' { $$ = $2 * $4; }
-          | '(' arhimetic_expr DIV arhimetic_expr ')' { $$ = $2 / $4; }
-          | '(' arhimetic_expr MOD arhimetic_expr ')' { $$ = $2 % $4; }
+          | arhimetic_expr MOD arhimetic_expr { $$ = $1 - (int)($1 / $3); }
+          // | '(' arhimetic_expr ADD arhimetic_expr ')' { $$ = $2 + $4; }
+          // | '(' arhimetic_expr MIN arhimetic_expr ')' { $$ = $2 - $4; }
+          // | '(' arhimetic_expr MUL arhimetic_expr ')' { $$ = $2 * $4; }
+          // | '(' arhimetic_expr DIV arhimetic_expr ')' { $$ = $2 / $4; }
+          // | '(' arhimetic_expr MOD arhimetic_expr ')' { $$ = $2 - (int)($2 / $4); }
           ;
 
 expr : lo_expr { $$ = $1; }
@@ -280,12 +288,14 @@ struct_dec : STRUCT struct_head ';'
 /**************** START RULES *********************************/
 /**************************************************************/
 
-declarations : variable_dec
-          | variable_dec declarations
-          | struct_dec 
-          | struct_dec declarations
-          | function
-          | function declarations
+declarations : 
+     variable_dec declarations
+     | struct_dec declarations
+     | function declarations
+     | function
+     | struct_dec
+     | variable_dec
+     ;
 
 begin     : declarations { printf("program corect sintactic\n"); }
           ;

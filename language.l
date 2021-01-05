@@ -17,13 +17,13 @@
 ("signed"|"unsigned")   { return TIP_SIGN;}
 ("false"|"true"|[01])   {
                             if( strcmp(yytext, "false") == 0) {
-                                yylval = 0;
+                                yylval.num = 0;
                             } else if( strcmp(yytext, "true") == 0) {
-                                yylval = 1;
+                                yylval.num = 1;
                             } else {
-                                yylval = atoi(yytext);
+                                yylval.num = atoi(yytext);
                             }
-                            printf("bool %d", yylval);
+                            printf("bool %d", yylval.num);
                             return BOOL_VAL;
                         }
 ([0-9]*[.])?[0-9]+      {
@@ -31,8 +31,8 @@
                             return DOUBLE_VAL;
                         }
 (0|[+-]?[1-9][0-9]*)    {
-                            yylval = atoi(yytext);
-                            printf("int %d", yylval);
+                            yylval.num = atoi(yytext);
+                            printf("int %d", yylval.num);
                             return INT_VAL;
                         }
 "="                     { return ASSIGN; }
