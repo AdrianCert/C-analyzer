@@ -18,12 +18,24 @@ void yyerror(char * s)
 %token BOOL_VAL CHAR_VAL STRING_VAL INT_VAL DOUBLE_VAL
 %token ASSIGN MUL_ASSIGN MOD_ASSIGN ADD_ASSIGN MIN_ASSIGN DIV_ASSIGN
 %token EQUAL NOT_EQ LOWER_EQ GREATER_EQ GREATER LOWER
-%token INCR DECR
 %token EVAL CALC
 %token CONST STATIC PRINT PMEM
-%token ADD MIN MUL OR AND NOT DIV MOD
 %token RETURN IF ELSE WHILE DO FOR
 %token STRUCT CLASS ACCESMODIF
+
+%left ADD MIN MUL OR AND NOT DIV MOD
+%left INCR DECR
+
+%union
+{
+     char * str;
+     int num;
+     double rnum;
+}
+
+%type <str> SIGN_TIP ID TRIVIAL_TIP CHAR_VAL STRING_VAL
+%type <d> BOOL_VAL INT_VAL lo_expr lo_operand lo_expr_r
+%type <rnum> DOUBLE_VAL arhimetic_expr expr ref_val const_value function_call calc_statement arhimetic_operand arhimetic_expr_r
 
 %start begin
 
@@ -67,23 +79,21 @@ statement_list : statement
           | statement_list statement
           ;
 
-block_body : statement_list
-
-ref_val : ID
-          | ID PMEM ID
-          | ID '.' ID
+ref_val : ID { $$ = 0; } //call_get value;
+          | ID PMEM ID { $$ = 0; } //call_get value;
+          | ID '.' ID { $$ = 0; } //call_get value;
           ;
 
 caller_params : expr
           | expr ',' caller_params
           ;
 
-function_call : ID '(' caller_params ')' ';'
-          | ID '(' ')' ';'
+function_call : ID '(' caller_params ')' ';' { $$ = 0;}
+          | ID '(' ')' ';' { $$ = 0; }
           ;
 
-block : '{' block_body '}'
-          | statement
+block : '{' statement_list '}'
+           | statement
           ;
 
 asign_statement : ref_val ASSIGN expr ';'
@@ -140,40 +150,49 @@ if_statement : IF '(' lo_expr ')' block
 /**************** EXPRESIONS RULES ****************************/
 /**************************************************************/
 
-lo_operand : ref_val { $$ = $1; }
-          | BOOL_VAL { $$ = $1; }
-          | function_call
-          | lo_expr { $$ = $1; }
+lo_operand : BOOL_VAL { $$ = $1; }
           ;
 
-lo_expr : NOT lo_expr { $$ = !$2; }
-          | lo_expr AND lo_expr { $$ = $1 && $3; }
-          | lo_expr OR lo_expr { $$ = $1 || $3; }
+lo_expr_r : lo_expr ;
+
+// lo_expr_l : lo_expr ;
+
+lo_expr : NOT lo_expr_r { $$ = !$2; }
+          | lo_expr AND lo_expr_r { $$ = $1 && $3; }
+          | lo_expr OR lo_expr_r { $$ = $1 || $3; }
           | lo_operand { $$ = $1; }
-          | arhimetic_expr GREATER arhimetic_expr { $$ = $1 > $3; }
-          | arhimetic_expr LOWER arhimetic_expr { $$ = $1 < $3; }
-          | arhimetic_expr EQUAL arhimetic_expr { $$ = $1 == $3; }
-          | arhimetic_expr NOT_EQ arhimetic_expr { $$ = $1 != $3; }
-          | arhimetic_expr LOWER_EQ arhimetic_expr { $$ = $1 <= $3; }
-          | arhimetic_expr GREATER_EQ arhimetic_expr { $$ = $1 >= $3; }
+          | arhimetic_expr GREATER arhimetic_expr_r { $$ = $1 > $3; }
+          | arhimetic_expr LOWER arhimetic_expr_r { $$ = $1 < $3; }
+          | arhimetic_expr EQUAL arhimetic_expr_r { $$ = $1 == $3; }
+          | arhimetic_expr NOT_EQ arhimetic_expr_r { $$ = $1 != $3; }
+          | arhimetic_expr LOWER_EQ arhimetic_expr_r { $$ = $1 <= $3; }
+          | arhimetic_expr GREATER_EQ arhimetic_expr_r { $$ = $1 >= $3; }
           ;
 
 arhimetic_operand : INCR ref_val { $$ = ++$2; }
           | ref_val { $$ = $1; }
           | ref_val INCR { $$ = $1++; }
           | ref_val DECR { $$ = $1--; }
-          | DECR ref_val { $$ = --$1; }
+          | DECR ref_val { $$ = --$2; }
           | const_value { $$ = $1; }
           | const_value INCR { $$ = $1++; }
           | const_value DECR { $$ = $1--; }
-          | INCR const_value { $$ = ++$1; }
-          | DECR const_value { $$ = --$1; }
-          | function_call
-          | function_call INCR
-          | function_call DECR
-          | INCR function_call
-          | DECR function_call
+          | INCR const_value { $$ = ++$2; }
+          | DECR const_value { $$ = --$2; }
+          | function_call { $$ = $1; }
+          | function_call INCR { $$ = $1++; }
+          | function_call DECR { $$ = $1++; }
+          | INCR function_call { $$ = ++$2; }
+          | DECR function_call { $$ = --$2; }
           ;
+
+arhimetic_expr_r: '(' arhimetic_expr ')' { $$ = $2; }
+          | arhimetic_expr { $$ = $1; }
+          ;
+
+// arhimetic_expr_l: '(' arhimetic_expr ')'
+//           | arhimetic_expr
+//           ;
 
 arhimetic_expr : arhimetic_operand { $$ = $1; }
           | arhimetic_expr ADD arhimetic_expr { $$ = $1 + $3; }
@@ -181,12 +200,18 @@ arhimetic_expr : arhimetic_operand { $$ = $1; }
           | arhimetic_expr MUL arhimetic_expr { $$ = $1 * $3; }
           | arhimetic_expr DIV arhimetic_expr { $$ = $1 / $3; }
           | arhimetic_expr MOD arhimetic_expr { $$ = $1 % $3; }
+          | '(' arhimetic_expr ADD arhimetic_expr ')' { $$ = $2 + $4; }
+          | '(' arhimetic_expr MIN arhimetic_expr ')' { $$ = $2 - $4; }
+          | '(' arhimetic_expr MUL arhimetic_expr ')' { $$ = $2 * $4; }
+          | '(' arhimetic_expr DIV arhimetic_expr ')' { $$ = $2 / $4; }
+          | '(' arhimetic_expr MOD arhimetic_expr ')' { $$ = $2 % $4; }
+          ;
 
 expr : lo_expr { $$ = $1; }
           | arhimetic_expr { $$ = $1; }
-          | function_call
-          | const_value { $$ = $1; }
-          | ref_val { $$ = $1; }
+          // | function_call
+          // | const_value { $$ = $1; }
+          // | ref_val { $$ = $1; }
           | calc_statement
           ;
 
@@ -199,15 +224,14 @@ no_parameter : data_type ID ;
 op_parameter : data_type ID ASSIGN const_value ;
 
 no_parameter_list : no_parameter
-               | no_parameter_list ',' no_parameter
+               | no_parameter ',' no_parameter_list
                ;
 
 // lista de parametrii optionali
 // poate sa aiba doar la sfarsit
-op_parameter_list : op_parameter_list ',' op_parameter
+op_parameter_list : op_parameter ',' op_parameter_list
+               | no_parameter_list
                | op_parameter
-               | no_parameter
-               | no_parameter_list ',' no_parameter
                ;
 
 parameter_list : op_parameter_list
@@ -218,7 +242,7 @@ function_head : data_type ID '(' parameter_list ')'
 
 function_dec : function_head ';' ;
 
-function_def : function_head '{' block_body '}' ';' ;
+function_def : function_head '{' statement_list '}' ';' ;
 
 function  : function_dec
           | function_def
