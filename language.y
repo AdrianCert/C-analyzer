@@ -156,7 +156,7 @@
 }
 
 %type <str> SIGN_TIP ID TRIVIAL_TIP CHAR_VAL STRING_VAL
-%type <num> BOOL_VAL INT_VAL lo_expr lo_operand
+%type <num> BOOL_VAL INT_VAL lo_expr// lo_operand
 %type <rnum> DOUBLE_VAL arhimetic_expr expr ref_val const_value function_call calc_statement arhimetic_operand numeric_val
 
 %start begin
@@ -245,7 +245,7 @@ loop_init : statement
           |
           ;
 
-stop_cond : lo_operand
+stop_cond : lo_expr//lo_operand
           |
           ;
 
@@ -253,7 +253,7 @@ loop_step : expr
           |
           ;
 
-condition: '(' lo_operand ')'
+condition: '(' stop_cond ')'
      ;
 
 for_statement : FOR '(' loop_init ';' stop_cond ';' loop_step ')' block ;
@@ -278,21 +278,17 @@ if_statement : IF condition block ELSE block
 /**************** EXPRESIONS RULES ****************************/
 /**************************************************************/
 
-lo_operand : lo_expr;
-          | '(' lo_expr ')' { $$ = $2; }
-          ;
-
-lo_expr : NOT lo_operand { $$ = !$2; }
-          | lo_operand AND lo_operand { $$ = $1 && $3; }
-          | lo_operand OR lo_operand { $$ = $1 || $3; }
-          | lo_operand { $$ = $1; }
+lo_expr : NOT lo_expr { $$ = !$2; }
+          | lo_expr AND lo_expr { $$ = $1 && $3; }
+          | lo_expr OR lo_expr { $$ = $1 || $3; }
           | arhimetic_operand GREATER arhimetic_operand { $$ = $1 > $3; }
           | arhimetic_operand LOWER arhimetic_operand { $$ = $1 < $3; }
           | arhimetic_operand EQUAL arhimetic_operand { $$ = $1 == $3; }
           | arhimetic_operand NOT_EQ arhimetic_operand { $$ = $1 != $3; }
           | arhimetic_operand LOWER_EQ arhimetic_operand { $$ = $1 <= $3; }
           | arhimetic_operand GREATER_EQ arhimetic_operand { $$ = $1 >= $3; }
-          //| const_value
+          | BOOL_VAL { $$ = $1; }
+          | '(' lo_expr ')' { $$ = $2; }
           ;
 
 numeric_val: ref_val { $$ = $1; }

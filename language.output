@@ -5,14 +5,8 @@ Terminals unused in grammar
     RETURN
 
 
-State 136 conflicts: 3 shift/reduce
-State 139 conflicts: 1 shift/reduce
-State 169 conflicts: 2 shift/reduce, 2 reduce/reduce
-State 170 conflicts: 2 shift/reduce
-State 171 conflicts: 1 shift/reduce
-State 199 conflicts: 1 shift/reduce, 3 reduce/reduce
-State 200 conflicts: 4 reduce/reduce
-State 210 conflicts: 2 shift/reduce, 1 reduce/reduce
+State 134 conflicts: 1 reduce/reduce
+State 140 conflicts: 1 shift/reduce
 
 
 Grammar
@@ -74,13 +68,13 @@ Grammar
    40 loop_init: statement
    41          | %empty
 
-   42 stop_cond: lo_operand
+   42 stop_cond: lo_expr
    43          | %empty
 
    44 loop_step: expr
    45          | %empty
 
-   46 condition: '(' lo_operand ')'
+   46 condition: '(' stop_cond ')'
 
    47 for_statement: FOR '(' loop_init ';' stop_cond ';' loop_step ')' block
 
@@ -91,132 +85,130 @@ Grammar
    50 if_statement: IF condition block ELSE block
    51             | IF condition block
 
-   52 lo_operand: lo_expr
-   53           | '(' lo_expr ')'
+   52 lo_expr: NOT lo_expr
+   53        | lo_expr AND lo_expr
+   54        | lo_expr OR lo_expr
+   55        | arhimetic_operand GREATER arhimetic_operand
+   56        | arhimetic_operand LOWER arhimetic_operand
+   57        | arhimetic_operand EQUAL arhimetic_operand
+   58        | arhimetic_operand NOT_EQ arhimetic_operand
+   59        | arhimetic_operand LOWER_EQ arhimetic_operand
+   60        | arhimetic_operand GREATER_EQ arhimetic_operand
+   61        | BOOL_VAL
+   62        | '(' lo_expr ')'
 
-   54 lo_expr: NOT lo_operand
-   55        | lo_operand AND lo_operand
-   56        | lo_operand OR lo_operand
-   57        | lo_operand
-   58        | arhimetic_operand GREATER arhimetic_operand
-   59        | arhimetic_operand LOWER arhimetic_operand
-   60        | arhimetic_operand EQUAL arhimetic_operand
-   61        | arhimetic_operand NOT_EQ arhimetic_operand
-   62        | arhimetic_operand LOWER_EQ arhimetic_operand
-   63        | arhimetic_operand GREATER_EQ arhimetic_operand
+   63 numeric_val: ref_val
+   64            | function_call
+   65            | const_value
 
-   64 numeric_val: ref_val
-   65            | function_call
-   66            | const_value
+   66 arhimetic_operand: numeric_val
+   67                  | arhimetic_operand INCR
+   68                  | arhimetic_operand DECR
+   69                  | INCR arhimetic_operand
+   70                  | DECR arhimetic_operand
+   71                  | '(' arhimetic_expr ')'
 
-   67 arhimetic_operand: numeric_val
-   68                  | arhimetic_operand INCR
-   69                  | arhimetic_operand DECR
-   70                  | INCR arhimetic_operand
-   71                  | DECR arhimetic_operand
-   72                  | '(' arhimetic_expr ')'
+   72 arhimetic_expr: arhimetic_operand
+   73               | arhimetic_operand ADD arhimetic_operand
+   74               | arhimetic_operand MIN arhimetic_operand
+   75               | arhimetic_operand MUL arhimetic_operand
+   76               | arhimetic_operand DIV arhimetic_operand
+   77               | arhimetic_operand MOD arhimetic_operand
 
-   73 arhimetic_expr: arhimetic_operand
-   74               | arhimetic_operand ADD arhimetic_operand
-   75               | arhimetic_operand MIN arhimetic_operand
-   76               | arhimetic_operand MUL arhimetic_operand
-   77               | arhimetic_operand DIV arhimetic_operand
-   78               | arhimetic_operand MOD arhimetic_operand
+   78 expr: arhimetic_expr
+   79     | calc_statement
 
-   79 expr: arhimetic_expr
-   80     | calc_statement
+   80 no_parameter: data_type ID
 
-   81 no_parameter: data_type ID
+   81 op_parameter: data_type ID ASSIGN const_value
 
-   82 op_parameter: data_type ID ASSIGN const_value
+   82 no_parameter_list: no_parameter
+   83                  | no_parameter ',' no_parameter_list
 
-   83 no_parameter_list: no_parameter
-   84                  | no_parameter ',' no_parameter_list
+   84 op_parameter_list: op_parameter ',' op_parameter_list
+   85                  | no_parameter_list
+   86                  | op_parameter
 
-   85 op_parameter_list: op_parameter ',' op_parameter_list
-   86                  | no_parameter_list
-   87                  | op_parameter
+   87 parameter_list: op_parameter_list
 
-   88 parameter_list: op_parameter_list
+   88 function_head: data_type ID '(' parameter_list ')'
+   89              | data_type ID '(' ')'
 
-   89 function_head: data_type ID '(' parameter_list ')'
-   90              | data_type ID '(' ')'
+   90 function_dec: function_head ';'
 
-   91 function_dec: function_head ';'
+   91 function_def: function_head '{' statement_list '}' ';'
 
-   92 function_def: function_head '{' statement_list '}' ';'
+   92 function: function_dec
+   93         | function_def
 
-   93 function: function_dec
-   94         | function_def
+   94 acces_modifier: ACCESMODIF ':'
 
-   95 acces_modifier: ACCESMODIF ':'
+   95 member_declarations: variable_dec
+   96                    | STATIC variable_dec
+   97                    | function_dec
+   98                    | STATIC function_dec
 
-   96 member_declarations: variable_dec
-   97                    | STATIC variable_dec
-   98                    | function_dec
-   99                    | STATIC function_dec
+   99 struct_member: member_declarations
+  100              | acces_modifier member_declarations
 
-  100 struct_member: member_declarations
-  101              | acces_modifier member_declarations
+  101 struct_body: struct_member
+  102            | struct_body struct_member
 
-  102 struct_body: struct_member
-  103            | struct_body struct_member
+  103 struct_head: ID
+  104            | ID '{' struct_body '}'
+  105            | ID '{' struct_body '}' variable_idendifier
 
-  104 struct_head: ID
-  105            | ID '{' struct_body '}'
-  106            | ID '{' struct_body '}' variable_idendifier
+  106 struct_dec: STRUCT struct_head ';'
+  107           | CLASS struct_head ';'
 
-  107 struct_dec: STRUCT struct_head ';'
-  108           | CLASS struct_head ';'
+  108 declarations: variable_dec declarations
+  109             | struct_dec declarations
+  110             | function declarations
+  111             | function
+  112             | struct_dec
+  113             | variable_dec
 
-  109 declarations: variable_dec declarations
-  110             | struct_dec declarations
-  111             | function declarations
-  112             | function
-  113             | struct_dec
-  114             | variable_dec
-
-  115 begin: declarations
+  114 begin: declarations
 
 
 Terminals, with rules where they appear
 
     $end (0) 0
     '"' (34) 38 39
-    '(' (40) 28 29 38 39 46 47 53 72 89 90
-    ')' (41) 28 29 38 39 46 47 53 72 89 90
-    ',' (44) 10 27 84 85
+    '(' (40) 28 29 38 39 46 47 62 71 88 89
+    ')' (41) 28 29 38 39 46 47 62 71 88 89
+    ',' (44) 10 27 83 84
     '.' (46) 25
-    ':' (58) 95
-    ';' (59) 11 12 28 29 32 33 34 35 36 37 38 39 47 48 91 92 107 108
-    '{' (123) 30 92 105 106
-    '}' (125) 30 92 105 106
+    ':' (58) 94
+    ';' (59) 11 12 28 29 32 33 34 35 36 37 38 39 47 48 90 91 106 107
+    '{' (123) 30 91 104 105
+    '}' (125) 30 91 104 105
     error (256)
     SIGN_TIP <str> (258) 2 3
     TRIVIAL_TIP <str> (259) 1
     TIP_SIGN (260) 3
-    ID <str> (261) 9 10 12 23 24 25 28 29 81 82 89 90 104 105 106
-    BOOL_VAL <num> (262) 7
+    ID <str> (261) 9 10 12 23 24 25 28 29 80 81 88 89 103 104 105
+    BOOL_VAL <num> (262) 7 61
     CHAR_VAL <str> (263) 5
     STRING_VAL <str> (264) 6
     INT_VAL <num> (265) 4
     DOUBLE_VAL <rnum> (266) 8
-    ASSIGN (267) 12 32 82
+    ASSIGN (267) 12 32 81
     MUL_ASSIGN (268) 33
     MOD_ASSIGN (269) 34
     ADD_ASSIGN (270) 35
     MIN_ASSIGN (271) 36
     DIV_ASSIGN (272) 37
-    EQUAL (273) 60
-    NOT_EQ (274) 61
-    LOWER_EQ (275) 62
-    GREATER_EQ (276) 63
-    GREATER (277) 58
-    LOWER (278) 59
+    EQUAL (273) 57
+    NOT_EQ (274) 58
+    LOWER_EQ (275) 59
+    GREATER_EQ (276) 60
+    GREATER (277) 55
+    LOWER (278) 56
     EVAL (279) 38
     CALC (280) 39
     CONST (281)
-    STATIC (282) 97 99
+    STATIC (282) 96 98
     PRINT (283)
     PMEM (284) 24
     RETURN (285)
@@ -225,19 +217,19 @@ Terminals, with rules where they appear
     WHILE (288) 48 49
     DO (289) 48
     FOR (290) 47
-    STRUCT (291) 107
-    CLASS (292) 108
-    ACCESMODIF (293) 95
-    NOT (294) 54
-    AND (295) 55
-    OR (296) 56
-    MUL (297) 76
-    DIV (298) 77
-    MOD (299) 78
-    ADD (300) 74
-    MIN (301) 75
-    INCR (302) 68 70
-    DECR (303) 69 71
+    STRUCT (291) 106
+    CLASS (292) 107
+    ACCESMODIF (293) 94
+    NOT (294) 52
+    AND (295) 53
+    OR (296) 54
+    MUL (297) 75
+    DIV (298) 76
+    MOD (299) 77
+    ADD (300) 73
+    MIN (301) 74
+    INCR (302) 67 69
+    DECR (303) 68 70
 
 
 Nonterminals, with rules where they appear
@@ -246,31 +238,31 @@ Nonterminals, with rules where they appear
         on left: 0
     data_type (59)
         on left: 1 2 3
-        on right: 11 12 81 82 89 90
+        on right: 11 12 80 81 88 89
     const_value <rnum> (60)
         on left: 4 5 6 7 8
-        on right: 66 82
+        on right: 65 81
     variable_idendifier (61)
         on left: 9 10
-        on right: 10 11 106
+        on right: 10 11 105
     variable_dec (62)
         on left: 11 12
-        on right: 13 96 97 109 114
+        on right: 13 95 96 108 113
     statement (63)
         on left: 13 14 15 16 17 18 19 20
         on right: 21 22 31 40
     statement_list (64)
         on left: 21 22
-        on right: 22 30 92
+        on right: 22 30 91
     ref_val <rnum> (65)
         on left: 23 24 25
-        on right: 32 33 34 35 36 37 64
+        on right: 32 33 34 35 36 37 63
     caller_params (66)
         on left: 26 27
         on right: 27 28
     function_call <rnum> (67)
         on left: 28 29
-        on right: 14 65
+        on right: 14 64
     block (68)
         on left: 30 31
         on right: 47 48 49 50 51
@@ -282,13 +274,13 @@ Nonterminals, with rules where they appear
         on right: 20
     calc_statement <rnum> (71)
         on left: 39
-        on right: 80
+        on right: 79
     loop_init (72)
         on left: 40 41
         on right: 47
     stop_cond (73)
         on left: 42 43
-        on right: 47
+        on right: 46 47
     loop_step (74)
         on left: 44 45
         on right: 47
@@ -307,74 +299,71 @@ Nonterminals, with rules where they appear
     if_statement (79)
         on left: 50 51
         on right: 15
-    lo_operand <num> (80)
-        on left: 52 53
-        on right: 42 46 54 55 56 57
-    lo_expr <num> (81)
-        on left: 54 55 56 57 58 59 60 61 62 63
-        on right: 52 53
-    numeric_val <rnum> (82)
-        on left: 64 65 66
-        on right: 67
-    arhimetic_operand <rnum> (83)
-        on left: 67 68 69 70 71 72
-        on right: 58 59 60 61 62 63 68 69 70 71 73 74 75 76 77 78
-    arhimetic_expr <rnum> (84)
-        on left: 73 74 75 76 77 78
-        on right: 38 39 72 79
-    expr <rnum> (85)
-        on left: 79 80
+    lo_expr <num> (80)
+        on left: 52 53 54 55 56 57 58 59 60 61 62
+        on right: 42 52 53 54 62
+    numeric_val <rnum> (81)
+        on left: 63 64 65
+        on right: 66
+    arhimetic_operand <rnum> (82)
+        on left: 66 67 68 69 70 71
+        on right: 55 56 57 58 59 60 67 68 69 70 72 73 74 75 76 77
+    arhimetic_expr <rnum> (83)
+        on left: 72 73 74 75 76 77
+        on right: 38 39 71 78
+    expr <rnum> (84)
+        on left: 78 79
         on right: 12 26 27 32 33 34 35 36 37 44
-    no_parameter (86)
+    no_parameter (85)
+        on left: 80
+        on right: 82 83
+    op_parameter (86)
         on left: 81
-        on right: 83 84
-    op_parameter (87)
-        on left: 82
-        on right: 85 87
-    no_parameter_list (88)
-        on left: 83 84
         on right: 84 86
-    op_parameter_list (89)
-        on left: 85 86 87
-        on right: 85 88
-    parameter_list (90)
-        on left: 88
-        on right: 89
-    function_head (91)
-        on left: 89 90
-        on right: 91 92
-    function_dec (92)
+    no_parameter_list (87)
+        on left: 82 83
+        on right: 83 85
+    op_parameter_list (88)
+        on left: 84 85 86
+        on right: 84 87
+    parameter_list (89)
+        on left: 87
+        on right: 88
+    function_head (90)
+        on left: 88 89
+        on right: 90 91
+    function_dec (91)
+        on left: 90
+        on right: 92 97 98
+    function_def (92)
         on left: 91
-        on right: 93 98 99
-    function_def (93)
-        on left: 92
-        on right: 94
-    function (94)
-        on left: 93 94
-        on right: 111 112
-    acces_modifier (95)
-        on left: 95
-        on right: 101
-    member_declarations (96)
-        on left: 96 97 98 99
-        on right: 100 101
-    struct_member (97)
-        on left: 100 101
-        on right: 102 103
-    struct_body (98)
-        on left: 102 103
-        on right: 103 105 106
-    struct_head (99)
-        on left: 104 105 106
-        on right: 107 108
-    struct_dec (100)
-        on left: 107 108
-        on right: 110 113
-    declarations (101)
-        on left: 109 110 111 112 113 114
-        on right: 109 110 111 115
-    begin (102)
-        on left: 115
+        on right: 93
+    function (93)
+        on left: 92 93
+        on right: 110 111
+    acces_modifier (94)
+        on left: 94
+        on right: 100
+    member_declarations (95)
+        on left: 95 96 97 98
+        on right: 99 100
+    struct_member (96)
+        on left: 99 100
+        on right: 101 102
+    struct_body (97)
+        on left: 101 102
+        on right: 102 104 105
+    struct_head (98)
+        on left: 103 104 105
+        on right: 106 107
+    struct_dec (99)
+        on left: 106 107
+        on right: 109 112
+    declarations (100)
+        on left: 108 109 110 111 112 113
+        on right: 108 109 110 114
+    begin (101)
+        on left: 114
         on right: 0
 
 
@@ -386,21 +375,21 @@ State 0
     3          | . TIP_SIGN SIGN_TIP
    11 variable_dec: . data_type variable_idendifier ';'
    12             | . data_type ID ASSIGN expr ';'
-   89 function_head: . data_type ID '(' parameter_list ')'
-   90              | . data_type ID '(' ')'
-   91 function_dec: . function_head ';'
-   92 function_def: . function_head '{' statement_list '}' ';'
-   93 function: . function_dec
-   94         | . function_def
-  107 struct_dec: . STRUCT struct_head ';'
-  108           | . CLASS struct_head ';'
-  109 declarations: . variable_dec declarations
-  110             | . struct_dec declarations
-  111             | . function declarations
-  112             | . function
-  113             | . struct_dec
-  114             | . variable_dec
-  115 begin: . declarations
+   88 function_head: . data_type ID '(' parameter_list ')'
+   89              | . data_type ID '(' ')'
+   90 function_dec: . function_head ';'
+   91 function_def: . function_head '{' statement_list '}' ';'
+   92 function: . function_dec
+   93         | . function_def
+  106 struct_dec: . STRUCT struct_head ';'
+  107           | . CLASS struct_head ';'
+  108 declarations: . variable_dec declarations
+  109             | . struct_dec declarations
+  110             | . function declarations
+  111             | . function
+  112             | . struct_dec
+  113             | . variable_dec
+  114 begin: . declarations
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -442,10 +431,10 @@ State 3
 
 State 4
 
-  104 struct_head: . ID
-  105            | . ID '{' struct_body '}'
-  106            | . ID '{' struct_body '}' variable_idendifier
-  107 struct_dec: STRUCT . struct_head ';'
+  103 struct_head: . ID
+  104            | . ID '{' struct_body '}'
+  105            | . ID '{' struct_body '}' variable_idendifier
+  106 struct_dec: STRUCT . struct_head ';'
 
     ID  shift, and go to state 16
 
@@ -454,10 +443,10 @@ State 4
 
 State 5
 
-  104 struct_head: . ID
-  105            | . ID '{' struct_body '}'
-  106            | . ID '{' struct_body '}' variable_idendifier
-  108 struct_dec: CLASS . struct_head ';'
+  103 struct_head: . ID
+  104            | . ID '{' struct_body '}'
+  105            | . ID '{' struct_body '}' variable_idendifier
+  107 struct_dec: CLASS . struct_head ';'
 
     ID  shift, and go to state 16
 
@@ -470,8 +459,8 @@ State 6
    10                    | . variable_idendifier ',' ID
    11 variable_dec: data_type . variable_idendifier ';'
    12             | data_type . ID ASSIGN expr ';'
-   89 function_head: data_type . ID '(' parameter_list ')'
-   90              | data_type . ID '(' ')'
+   88 function_head: data_type . ID '(' parameter_list ')'
+   89              | data_type . ID '(' ')'
 
     ID  shift, and go to state 19
 
@@ -485,22 +474,22 @@ State 7
     3          | . TIP_SIGN SIGN_TIP
    11 variable_dec: . data_type variable_idendifier ';'
    12             | . data_type ID ASSIGN expr ';'
-   89 function_head: . data_type ID '(' parameter_list ')'
-   90              | . data_type ID '(' ')'
-   91 function_dec: . function_head ';'
-   92 function_def: . function_head '{' statement_list '}' ';'
-   93 function: . function_dec
-   94         | . function_def
-  107 struct_dec: . STRUCT struct_head ';'
-  108           | . CLASS struct_head ';'
-  109 declarations: . variable_dec declarations
-  109             | variable_dec . declarations
-  110             | . struct_dec declarations
-  111             | . function declarations
-  112             | . function
-  113             | . struct_dec
-  114             | . variable_dec
-  114             | variable_dec .  [$end]
+   88 function_head: . data_type ID '(' parameter_list ')'
+   89              | . data_type ID '(' ')'
+   90 function_dec: . function_head ';'
+   91 function_def: . function_head '{' statement_list '}' ';'
+   92 function: . function_dec
+   93         | . function_def
+  106 struct_dec: . STRUCT struct_head ';'
+  107           | . CLASS struct_head ';'
+  108 declarations: . variable_dec declarations
+  108             | variable_dec . declarations
+  109             | . struct_dec declarations
+  110             | . function declarations
+  111             | . function
+  112             | . struct_dec
+  113             | . variable_dec
+  113             | variable_dec .  [$end]
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -508,7 +497,7 @@ State 7
     STRUCT       shift, and go to state 4
     CLASS        shift, and go to state 5
 
-    $default  reduce using rule 114 (declarations)
+    $default  reduce using rule 113 (declarations)
 
     data_type      go to state 6
     variable_dec   go to state 7
@@ -522,8 +511,8 @@ State 7
 
 State 8
 
-   91 function_dec: function_head . ';'
-   92 function_def: function_head . '{' statement_list '}' ';'
+   90 function_dec: function_head . ';'
+   91 function_def: function_head . '{' statement_list '}' ';'
 
     ';'  shift, and go to state 22
     '{'  shift, and go to state 23
@@ -531,16 +520,16 @@ State 8
 
 State 9
 
-   93 function: function_dec .
+   92 function: function_dec .
 
-    $default  reduce using rule 93 (function)
+    $default  reduce using rule 92 (function)
 
 
 State 10
 
-   94 function: function_def .
+   93 function: function_def .
 
-    $default  reduce using rule 94 (function)
+    $default  reduce using rule 93 (function)
 
 
 State 11
@@ -550,22 +539,22 @@ State 11
     3          | . TIP_SIGN SIGN_TIP
    11 variable_dec: . data_type variable_idendifier ';'
    12             | . data_type ID ASSIGN expr ';'
-   89 function_head: . data_type ID '(' parameter_list ')'
-   90              | . data_type ID '(' ')'
-   91 function_dec: . function_head ';'
-   92 function_def: . function_head '{' statement_list '}' ';'
-   93 function: . function_dec
-   94         | . function_def
-  107 struct_dec: . STRUCT struct_head ';'
-  108           | . CLASS struct_head ';'
-  109 declarations: . variable_dec declarations
-  110             | . struct_dec declarations
-  111             | . function declarations
-  111             | function . declarations
-  112             | . function
-  112             | function .  [$end]
-  113             | . struct_dec
-  114             | . variable_dec
+   88 function_head: . data_type ID '(' parameter_list ')'
+   89              | . data_type ID '(' ')'
+   90 function_dec: . function_head ';'
+   91 function_def: . function_head '{' statement_list '}' ';'
+   92 function: . function_dec
+   93         | . function_def
+  106 struct_dec: . STRUCT struct_head ';'
+  107           | . CLASS struct_head ';'
+  108 declarations: . variable_dec declarations
+  109             | . struct_dec declarations
+  110             | . function declarations
+  110             | function . declarations
+  111             | . function
+  111             | function .  [$end]
+  112             | . struct_dec
+  113             | . variable_dec
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -573,7 +562,7 @@ State 11
     STRUCT       shift, and go to state 4
     CLASS        shift, and go to state 5
 
-    $default  reduce using rule 112 (declarations)
+    $default  reduce using rule 111 (declarations)
 
     data_type      go to state 6
     variable_dec   go to state 7
@@ -592,22 +581,22 @@ State 12
     3          | . TIP_SIGN SIGN_TIP
    11 variable_dec: . data_type variable_idendifier ';'
    12             | . data_type ID ASSIGN expr ';'
-   89 function_head: . data_type ID '(' parameter_list ')'
-   90              | . data_type ID '(' ')'
-   91 function_dec: . function_head ';'
-   92 function_def: . function_head '{' statement_list '}' ';'
-   93 function: . function_dec
-   94         | . function_def
-  107 struct_dec: . STRUCT struct_head ';'
-  108           | . CLASS struct_head ';'
-  109 declarations: . variable_dec declarations
-  110             | . struct_dec declarations
-  110             | struct_dec . declarations
-  111             | . function declarations
-  112             | . function
-  113             | . struct_dec
-  113             | struct_dec .  [$end]
-  114             | . variable_dec
+   88 function_head: . data_type ID '(' parameter_list ')'
+   89              | . data_type ID '(' ')'
+   90 function_dec: . function_head ';'
+   91 function_def: . function_head '{' statement_list '}' ';'
+   92 function: . function_dec
+   93         | . function_def
+  106 struct_dec: . STRUCT struct_head ';'
+  107           | . CLASS struct_head ';'
+  108 declarations: . variable_dec declarations
+  109             | . struct_dec declarations
+  109             | struct_dec . declarations
+  110             | . function declarations
+  111             | . function
+  112             | . struct_dec
+  112             | struct_dec .  [$end]
+  113             | . variable_dec
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -615,7 +604,7 @@ State 12
     STRUCT       shift, and go to state 4
     CLASS        shift, and go to state 5
 
-    $default  reduce using rule 113 (declarations)
+    $default  reduce using rule 112 (declarations)
 
     data_type      go to state 6
     variable_dec   go to state 7
@@ -629,9 +618,9 @@ State 12
 
 State 13
 
-  115 begin: declarations .
+  114 begin: declarations .
 
-    $default  reduce using rule 115 (begin)
+    $default  reduce using rule 114 (begin)
 
 
 State 14
@@ -650,25 +639,25 @@ State 15
 
 State 16
 
-  104 struct_head: ID .  [';']
-  105            | ID . '{' struct_body '}'
-  106            | ID . '{' struct_body '}' variable_idendifier
+  103 struct_head: ID .  [';']
+  104            | ID . '{' struct_body '}'
+  105            | ID . '{' struct_body '}' variable_idendifier
 
     '{'  shift, and go to state 27
 
-    $default  reduce using rule 104 (struct_head)
+    $default  reduce using rule 103 (struct_head)
 
 
 State 17
 
-  107 struct_dec: STRUCT struct_head . ';'
+  106 struct_dec: STRUCT struct_head . ';'
 
     ';'  shift, and go to state 28
 
 
 State 18
 
-  108 struct_dec: CLASS struct_head . ';'
+  107 struct_dec: CLASS struct_head . ';'
 
     ';'  shift, and go to state 29
 
@@ -677,8 +666,8 @@ State 19
 
     9 variable_idendifier: ID .  [',', ';']
    12 variable_dec: data_type ID . ASSIGN expr ';'
-   89 function_head: data_type ID . '(' parameter_list ')'
-   90              | data_type ID . '(' ')'
+   88 function_head: data_type ID . '(' parameter_list ')'
+   89              | data_type ID . '(' ')'
 
     ASSIGN  shift, and go to state 30
     '('     shift, and go to state 31
@@ -697,16 +686,16 @@ State 20
 
 State 21
 
-  109 declarations: variable_dec declarations .
+  108 declarations: variable_dec declarations .
 
-    $default  reduce using rule 109 (declarations)
+    $default  reduce using rule 108 (declarations)
 
 
 State 22
 
-   91 function_dec: function_head ';' .
+   90 function_dec: function_head ';' .
 
-    $default  reduce using rule 91 (function_dec)
+    $default  reduce using rule 90 (function_dec)
 
 
 State 23
@@ -743,7 +732,7 @@ State 23
    49 while_statement: . WHILE condition block
    50 if_statement: . IF condition block ELSE block
    51             | . IF condition block
-   92 function_def: function_head '{' . statement_list '}' ';'
+   91 function_def: function_head '{' . statement_list '}' ';'
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -771,16 +760,16 @@ State 23
 
 State 24
 
-  111 declarations: function declarations .
+  110 declarations: function declarations .
 
-    $default  reduce using rule 111 (declarations)
+    $default  reduce using rule 110 (declarations)
 
 
 State 25
 
-  110 declarations: struct_dec declarations .
+  109 declarations: struct_dec declarations .
 
-    $default  reduce using rule 110 (declarations)
+    $default  reduce using rule 109 (declarations)
 
 
 State 26
@@ -797,20 +786,20 @@ State 27
     3          | . TIP_SIGN SIGN_TIP
    11 variable_dec: . data_type variable_idendifier ';'
    12             | . data_type ID ASSIGN expr ';'
-   89 function_head: . data_type ID '(' parameter_list ')'
-   90              | . data_type ID '(' ')'
-   91 function_dec: . function_head ';'
-   95 acces_modifier: . ACCESMODIF ':'
-   96 member_declarations: . variable_dec
-   97                    | . STATIC variable_dec
-   98                    | . function_dec
-   99                    | . STATIC function_dec
-  100 struct_member: . member_declarations
-  101              | . acces_modifier member_declarations
-  102 struct_body: . struct_member
-  103            | . struct_body struct_member
-  105 struct_head: ID '{' . struct_body '}'
-  106            | ID '{' . struct_body '}' variable_idendifier
+   88 function_head: . data_type ID '(' parameter_list ')'
+   89              | . data_type ID '(' ')'
+   90 function_dec: . function_head ';'
+   94 acces_modifier: . ACCESMODIF ':'
+   95 member_declarations: . variable_dec
+   96                    | . STATIC variable_dec
+   97                    | . function_dec
+   98                    | . STATIC function_dec
+   99 struct_member: . member_declarations
+  100              | . acces_modifier member_declarations
+  101 struct_body: . struct_member
+  102            | . struct_body struct_member
+  104 struct_head: ID '{' . struct_body '}'
+  105            | ID '{' . struct_body '}' variable_idendifier
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -830,16 +819,16 @@ State 27
 
 State 28
 
-  107 struct_dec: STRUCT struct_head ';' .
+  106 struct_dec: STRUCT struct_head ';' .
 
-    $default  reduce using rule 107 (struct_dec)
+    $default  reduce using rule 106 (struct_dec)
 
 
 State 29
 
-  108 struct_dec: CLASS struct_head ';' .
+  107 struct_dec: CLASS struct_head ';' .
 
-    $default  reduce using rule 108 (struct_dec)
+    $default  reduce using rule 107 (struct_dec)
 
 
 State 30
@@ -856,23 +845,23 @@ State 30
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
    39 calc_statement: . CALC '(' '"' arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
-   79 expr: . arhimetic_expr
-   80     | . calc_statement
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+   78 expr: . arhimetic_expr
+   79     | . calc_statement
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -900,16 +889,16 @@ State 31
     1 data_type: . TRIVIAL_TIP
     2          | . SIGN_TIP
     3          | . TIP_SIGN SIGN_TIP
-   81 no_parameter: . data_type ID
-   82 op_parameter: . data_type ID ASSIGN const_value
-   83 no_parameter_list: . no_parameter
-   84                  | . no_parameter ',' no_parameter_list
-   85 op_parameter_list: . op_parameter ',' op_parameter_list
-   86                  | . no_parameter_list
-   87                  | . op_parameter
-   88 parameter_list: . op_parameter_list
-   89 function_head: data_type ID '(' . parameter_list ')'
-   90              | data_type ID '(' . ')'
+   80 no_parameter: . data_type ID
+   81 op_parameter: . data_type ID ASSIGN const_value
+   82 no_parameter_list: . no_parameter
+   83                  | . no_parameter ',' no_parameter_list
+   84 op_parameter_list: . op_parameter ',' op_parameter_list
+   85                  | . no_parameter_list
+   86                  | . op_parameter
+   87 parameter_list: . op_parameter_list
+   88 function_head: data_type ID '(' . parameter_list ')'
+   89              | data_type ID '(' . ')'
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -962,7 +951,7 @@ State 35
 
 State 36
 
-   46 condition: . '(' lo_operand ')'
+   46 condition: . '(' stop_cond ')'
    50 if_statement: IF . condition block ELSE block
    51             | IF . condition block
 
@@ -973,7 +962,7 @@ State 36
 
 State 37
 
-   46 condition: . '(' lo_operand ')'
+   46 condition: . '(' stop_cond ')'
    49 while_statement: WHILE . condition block
 
     '('  shift, and go to state 90
@@ -1108,7 +1097,7 @@ State 43
    49 while_statement: . WHILE condition block
    50 if_statement: . IF condition block ELSE block
    51             | . IF condition block
-   92 function_def: function_head '{' statement_list . '}' ';'
+   91 function_def: function_head '{' statement_list . '}' ';'
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -1207,11 +1196,11 @@ State 52
     3          | . TIP_SIGN SIGN_TIP
    11 variable_dec: . data_type variable_idendifier ';'
    12             | . data_type ID ASSIGN expr ';'
-   89 function_head: . data_type ID '(' parameter_list ')'
-   90              | . data_type ID '(' ')'
-   91 function_dec: . function_head ';'
-   97 member_declarations: STATIC . variable_dec
-   99                    | STATIC . function_dec
+   88 function_head: . data_type ID '(' parameter_list ')'
+   89              | . data_type ID '(' ')'
+   90 function_dec: . function_head ';'
+   96 member_declarations: STATIC . variable_dec
+   98                    | STATIC . function_dec
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -1225,30 +1214,30 @@ State 52
 
 State 53
 
-   95 acces_modifier: ACCESMODIF . ':'
+   94 acces_modifier: ACCESMODIF . ':'
 
     ':'  shift, and go to state 108
 
 
 State 54
 
-   96 member_declarations: variable_dec .
+   95 member_declarations: variable_dec .
 
-    $default  reduce using rule 96 (member_declarations)
+    $default  reduce using rule 95 (member_declarations)
 
 
 State 55
 
-   91 function_dec: function_head . ';'
+   90 function_dec: function_head . ';'
 
     ';'  shift, and go to state 22
 
 
 State 56
 
-   98 member_declarations: function_dec .
+   97 member_declarations: function_dec .
 
-    $default  reduce using rule 98 (member_declarations)
+    $default  reduce using rule 97 (member_declarations)
 
 
 State 57
@@ -1258,14 +1247,14 @@ State 57
     3          | . TIP_SIGN SIGN_TIP
    11 variable_dec: . data_type variable_idendifier ';'
    12             | . data_type ID ASSIGN expr ';'
-   89 function_head: . data_type ID '(' parameter_list ')'
-   90              | . data_type ID '(' ')'
-   91 function_dec: . function_head ';'
-   96 member_declarations: . variable_dec
-   97                    | . STATIC variable_dec
-   98                    | . function_dec
-   99                    | . STATIC function_dec
-  101 struct_member: acces_modifier . member_declarations
+   88 function_head: . data_type ID '(' parameter_list ')'
+   89              | . data_type ID '(' ')'
+   90 function_dec: . function_head ';'
+   95 member_declarations: . variable_dec
+   96                    | . STATIC variable_dec
+   97                    | . function_dec
+   98                    | . STATIC function_dec
+  100 struct_member: acces_modifier . member_declarations
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -1281,16 +1270,16 @@ State 57
 
 State 58
 
-  100 struct_member: member_declarations .
+   99 struct_member: member_declarations .
 
-    $default  reduce using rule 100 (struct_member)
+    $default  reduce using rule 99 (struct_member)
 
 
 State 59
 
-  102 struct_body: struct_member .
+  101 struct_body: struct_member .
 
-    $default  reduce using rule 102 (struct_body)
+    $default  reduce using rule 101 (struct_body)
 
 
 State 60
@@ -1300,19 +1289,19 @@ State 60
     3          | . TIP_SIGN SIGN_TIP
    11 variable_dec: . data_type variable_idendifier ';'
    12             | . data_type ID ASSIGN expr ';'
-   89 function_head: . data_type ID '(' parameter_list ')'
-   90              | . data_type ID '(' ')'
-   91 function_dec: . function_head ';'
-   95 acces_modifier: . ACCESMODIF ':'
-   96 member_declarations: . variable_dec
-   97                    | . STATIC variable_dec
-   98                    | . function_dec
-   99                    | . STATIC function_dec
-  100 struct_member: . member_declarations
-  101              | . acces_modifier member_declarations
-  103 struct_body: struct_body . struct_member
-  105 struct_head: ID '{' struct_body . '}'
-  106            | ID '{' struct_body . '}' variable_idendifier
+   88 function_head: . data_type ID '(' parameter_list ')'
+   89              | . data_type ID '(' ')'
+   90 function_dec: . function_head ';'
+   94 acces_modifier: . ACCESMODIF ':'
+   95 member_declarations: . variable_dec
+   96                    | . STATIC variable_dec
+   97                    | . function_dec
+   98                    | . STATIC function_dec
+   99 struct_member: . member_declarations
+  100              | . acces_modifier member_declarations
+  102 struct_body: struct_body . struct_member
+  104 struct_head: ID '{' struct_body . '}'
+  105            | ID '{' struct_body . '}' variable_idendifier
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -1384,16 +1373,16 @@ State 67
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   70                  | INCR . arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   69                  | INCR . arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -1424,16 +1413,16 @@ State 68
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   71                  | DECR . arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   70                  | DECR . arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -1464,22 +1453,22 @@ State 69
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   72                  | '(' . arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   71                  | '(' . arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -1501,49 +1490,49 @@ State 69
 
 State 70
 
-   66 numeric_val: const_value .
-
-    $default  reduce using rule 66 (numeric_val)
-
-
-State 71
-
-   64 numeric_val: ref_val .
-
-    $default  reduce using rule 64 (numeric_val)
-
-
-State 72
-
-   65 numeric_val: function_call .
+   65 numeric_val: const_value .
 
     $default  reduce using rule 65 (numeric_val)
 
 
+State 71
+
+   63 numeric_val: ref_val .
+
+    $default  reduce using rule 63 (numeric_val)
+
+
+State 72
+
+   64 numeric_val: function_call .
+
+    $default  reduce using rule 64 (numeric_val)
+
+
 State 73
 
-   80 expr: calc_statement .
+   79 expr: calc_statement .
 
-    $default  reduce using rule 80 (expr)
+    $default  reduce using rule 79 (expr)
 
 
 State 74
 
-   67 arhimetic_operand: numeric_val .
+   66 arhimetic_operand: numeric_val .
 
-    $default  reduce using rule 67 (arhimetic_operand)
+    $default  reduce using rule 66 (arhimetic_operand)
 
 
 State 75
 
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-   73 arhimetic_expr: arhimetic_operand .  [',', ';', ')', '"']
-   74               | arhimetic_operand . ADD arhimetic_operand
-   75               | arhimetic_operand . MIN arhimetic_operand
-   76               | arhimetic_operand . MUL arhimetic_operand
-   77               | arhimetic_operand . DIV arhimetic_operand
-   78               | arhimetic_operand . MOD arhimetic_operand
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+   72 arhimetic_expr: arhimetic_operand .  [',', ';', ')', '"']
+   73               | arhimetic_operand . ADD arhimetic_operand
+   74               | arhimetic_operand . MIN arhimetic_operand
+   75               | arhimetic_operand . MUL arhimetic_operand
+   76               | arhimetic_operand . DIV arhimetic_operand
+   77               | arhimetic_operand . MOD arhimetic_operand
 
     MUL   shift, and go to state 116
     DIV   shift, and go to state 117
@@ -1553,14 +1542,14 @@ State 75
     INCR  shift, and go to state 121
     DECR  shift, and go to state 122
 
-    $default  reduce using rule 73 (arhimetic_expr)
+    $default  reduce using rule 72 (arhimetic_expr)
 
 
 State 76
 
-   79 expr: arhimetic_expr .
+   78 expr: arhimetic_expr .
 
-    $default  reduce using rule 79 (expr)
+    $default  reduce using rule 78 (expr)
 
 
 State 77
@@ -1572,56 +1561,56 @@ State 77
 
 State 78
 
-   90 function_head: data_type ID '(' ')' .
+   89 function_head: data_type ID '(' ')' .
 
-    $default  reduce using rule 90 (function_head)
+    $default  reduce using rule 89 (function_head)
 
 
 State 79
 
-   81 no_parameter: data_type . ID
-   82 op_parameter: data_type . ID ASSIGN const_value
+   80 no_parameter: data_type . ID
+   81 op_parameter: data_type . ID ASSIGN const_value
 
     ID  shift, and go to state 124
 
 
 State 80
 
-   83 no_parameter_list: no_parameter .  [')']
-   84                  | no_parameter . ',' no_parameter_list
+   82 no_parameter_list: no_parameter .  [')']
+   83                  | no_parameter . ',' no_parameter_list
 
     ','  shift, and go to state 125
 
-    $default  reduce using rule 83 (no_parameter_list)
+    $default  reduce using rule 82 (no_parameter_list)
 
 
 State 81
 
-   85 op_parameter_list: op_parameter . ',' op_parameter_list
-   87                  | op_parameter .  [')']
+   84 op_parameter_list: op_parameter . ',' op_parameter_list
+   86                  | op_parameter .  [')']
 
     ','  shift, and go to state 126
-
-    $default  reduce using rule 87 (op_parameter_list)
-
-
-State 82
-
-   86 op_parameter_list: no_parameter_list .
 
     $default  reduce using rule 86 (op_parameter_list)
 
 
+State 82
+
+   85 op_parameter_list: no_parameter_list .
+
+    $default  reduce using rule 85 (op_parameter_list)
+
+
 State 83
 
-   88 parameter_list: op_parameter_list .
+   87 parameter_list: op_parameter_list .
 
-    $default  reduce using rule 88 (parameter_list)
+    $default  reduce using rule 87 (parameter_list)
 
 
 State 84
 
-   89 function_head: data_type ID '(' parameter_list . ')'
+   88 function_head: data_type ID '(' parameter_list . ')'
 
     ')'  shift, and go to state 127
 
@@ -1664,23 +1653,23 @@ State 88
    29              | . ID '(' ')' ';'
    29              | ID '(' . ')' ';'
    39 calc_statement: . CALC '(' '"' arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
-   79 expr: . arhimetic_expr
-   80     | . calc_statement
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+   78 expr: . arhimetic_expr
+   79     | . calc_statement
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -1724,47 +1713,50 @@ State 90
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   46 condition: '(' . lo_operand ')'
-   52 lo_operand: . lo_expr
-   53           | . '(' lo_expr ')'
-   54 lo_expr: . NOT lo_operand
-   55        | . lo_operand AND lo_operand
-   56        | . lo_operand OR lo_operand
-   57        | . lo_operand
-   58        | . arhimetic_operand GREATER arhimetic_operand
-   59        | . arhimetic_operand LOWER arhimetic_operand
-   60        | . arhimetic_operand EQUAL arhimetic_operand
-   61        | . arhimetic_operand NOT_EQ arhimetic_operand
-   62        | . arhimetic_operand LOWER_EQ arhimetic_operand
-   63        | . arhimetic_operand GREATER_EQ arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   42 stop_cond: . lo_expr
+   43          | . %empty  [')']
+   46 condition: '(' . stop_cond ')'
+   52 lo_expr: . NOT lo_expr
+   53        | . lo_expr AND lo_expr
+   54        | . lo_expr OR lo_expr
+   55        | . arhimetic_operand GREATER arhimetic_operand
+   56        | . arhimetic_operand LOWER arhimetic_operand
+   57        | . arhimetic_operand EQUAL arhimetic_operand
+   58        | . arhimetic_operand NOT_EQ arhimetic_operand
+   59        | . arhimetic_operand LOWER_EQ arhimetic_operand
+   60        | . arhimetic_operand GREATER_EQ arhimetic_operand
+   61        | . BOOL_VAL
+   62        | . '(' lo_expr ')'
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
-    BOOL_VAL    shift, and go to state 61
+    BOOL_VAL    shift, and go to state 134
     CHAR_VAL    shift, and go to state 62
     STRING_VAL  shift, and go to state 63
     INT_VAL     shift, and go to state 64
     DOUBLE_VAL  shift, and go to state 65
-    NOT         shift, and go to state 134
+    NOT         shift, and go to state 135
     INCR        shift, and go to state 67
     DECR        shift, and go to state 68
-    '('         shift, and go to state 135
+    '('         shift, and go to state 136
+
+    $default  reduce using rule 43 (stop_cond)
 
     const_value        go to state 70
     ref_val            go to state 71
     function_call      go to state 72
-    lo_operand         go to state 136
-    lo_expr            go to state 137
+    stop_cond          go to state 137
+    lo_expr            go to state 138
     numeric_val        go to state 74
-    arhimetic_operand  go to state 138
+    arhimetic_operand  go to state 139
 
 
 State 91
@@ -1820,7 +1812,7 @@ State 91
     statement          go to state 94
     ref_val            go to state 44
     function_call      go to state 45
-    block              go to state 139
+    block              go to state 140
     asign_statement    go to state 46
     eval_statement     go to state 47
     for_statement      go to state 48
@@ -1881,7 +1873,7 @@ State 92
     statement          go to state 94
     ref_val            go to state 44
     function_call      go to state 45
-    block              go to state 140
+    block              go to state 141
     asign_statement    go to state 46
     eval_statement     go to state 47
     for_statement      go to state 48
@@ -1939,7 +1931,7 @@ State 93
     data_type          go to state 40
     variable_dec       go to state 41
     statement          go to state 42
-    statement_list     go to state 141
+    statement_list     go to state 142
     ref_val            go to state 44
     function_call      go to state 45
     asign_statement    go to state 46
@@ -1961,7 +1953,7 @@ State 95
 
    48 dowhile_statement: DO block . WHILE condition ';'
 
-    WHILE  shift, and go to state 142
+    WHILE  shift, and go to state 143
 
 
 State 96
@@ -2014,12 +2006,12 @@ State 96
 
     data_type          go to state 40
     variable_dec       go to state 41
-    statement          go to state 143
+    statement          go to state 144
     ref_val            go to state 44
     function_call      go to state 45
     asign_statement    go to state 46
     eval_statement     go to state 47
-    loop_init          go to state 144
+    loop_init          go to state 145
     for_statement      go to state 48
     dowhile_statement  go to state 49
     while_statement    go to state 50
@@ -2038,9 +2030,9 @@ State 97
 
 State 98
 
-   92 function_def: function_head '{' statement_list '}' . ';'
+   91 function_def: function_head '{' statement_list '}' . ';'
 
-    ';'  shift, and go to state 145
+    ';'  shift, and go to state 146
 
 
 State 99
@@ -2064,76 +2056,23 @@ State 100
    29              | . ID '(' ')' ';'
    32 asign_statement: ref_val ASSIGN . expr ';'
    39 calc_statement: . CALC '(' '"' arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
-   79 expr: . arhimetic_expr
-   80     | . calc_statement
-
-    ID          shift, and go to state 34
-    BOOL_VAL    shift, and go to state 61
-    CHAR_VAL    shift, and go to state 62
-    STRING_VAL  shift, and go to state 63
-    INT_VAL     shift, and go to state 64
-    DOUBLE_VAL  shift, and go to state 65
-    CALC        shift, and go to state 66
-    INCR        shift, and go to state 67
-    DECR        shift, and go to state 68
-    '('         shift, and go to state 69
-
-    const_value        go to state 70
-    ref_val            go to state 71
-    function_call      go to state 72
-    calc_statement     go to state 73
-    numeric_val        go to state 74
-    arhimetic_operand  go to state 75
-    arhimetic_expr     go to state 76
-    expr               go to state 146
-
-
-State 101
-
-    4 const_value: . INT_VAL
-    5            | . CHAR_VAL
-    6            | . STRING_VAL
-    7            | . BOOL_VAL
-    8            | . DOUBLE_VAL
-   23 ref_val: . ID
-   24        | . ID PMEM ID
-   25        | . ID '.' ID
-   28 function_call: . ID '(' caller_params ')' ';'
-   29              | . ID '(' ')' ';'
-   33 asign_statement: ref_val MUL_ASSIGN . expr ';'
-   39 calc_statement: . CALC '(' '"' arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
-   79 expr: . arhimetic_expr
-   80     | . calc_statement
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+   78 expr: . arhimetic_expr
+   79     | . calc_statement
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -2156,7 +2095,7 @@ State 101
     expr               go to state 147
 
 
-State 102
+State 101
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
@@ -2168,25 +2107,25 @@ State 102
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   34 asign_statement: ref_val MOD_ASSIGN . expr ';'
+   33 asign_statement: ref_val MUL_ASSIGN . expr ';'
    39 calc_statement: . CALC '(' '"' arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
-   79 expr: . arhimetic_expr
-   80     | . calc_statement
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+   78 expr: . arhimetic_expr
+   79     | . calc_statement
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -2209,7 +2148,7 @@ State 102
     expr               go to state 148
 
 
-State 103
+State 102
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
@@ -2221,25 +2160,25 @@ State 103
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   35 asign_statement: ref_val ADD_ASSIGN . expr ';'
+   34 asign_statement: ref_val MOD_ASSIGN . expr ';'
    39 calc_statement: . CALC '(' '"' arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
-   79 expr: . arhimetic_expr
-   80     | . calc_statement
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+   78 expr: . arhimetic_expr
+   79     | . calc_statement
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -2262,7 +2201,7 @@ State 103
     expr               go to state 149
 
 
-State 104
+State 103
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
@@ -2274,25 +2213,25 @@ State 104
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   36 asign_statement: ref_val MIN_ASSIGN . expr ';'
+   35 asign_statement: ref_val ADD_ASSIGN . expr ';'
    39 calc_statement: . CALC '(' '"' arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
-   79 expr: . arhimetic_expr
-   80     | . calc_statement
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+   78 expr: . arhimetic_expr
+   79     | . calc_statement
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -2315,7 +2254,7 @@ State 104
     expr               go to state 150
 
 
-State 105
+State 104
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
@@ -2327,25 +2266,25 @@ State 105
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   37 asign_statement: ref_val DIV_ASSIGN . expr ';'
+   36 asign_statement: ref_val MIN_ASSIGN . expr ';'
    39 calc_statement: . CALC '(' '"' arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
-   79 expr: . arhimetic_expr
-   80     | . calc_statement
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+   78 expr: . arhimetic_expr
+   79     | . calc_statement
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -2368,67 +2307,132 @@ State 105
     expr               go to state 151
 
 
+State 105
+
+    4 const_value: . INT_VAL
+    5            | . CHAR_VAL
+    6            | . STRING_VAL
+    7            | . BOOL_VAL
+    8            | . DOUBLE_VAL
+   23 ref_val: . ID
+   24        | . ID PMEM ID
+   25        | . ID '.' ID
+   28 function_call: . ID '(' caller_params ')' ';'
+   29              | . ID '(' ')' ';'
+   37 asign_statement: ref_val DIV_ASSIGN . expr ';'
+   39 calc_statement: . CALC '(' '"' arhimetic_expr '"' ')' ';'
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+   78 expr: . arhimetic_expr
+   79     | . calc_statement
+
+    ID          shift, and go to state 34
+    BOOL_VAL    shift, and go to state 61
+    CHAR_VAL    shift, and go to state 62
+    STRING_VAL  shift, and go to state 63
+    INT_VAL     shift, and go to state 64
+    DOUBLE_VAL  shift, and go to state 65
+    CALC        shift, and go to state 66
+    INCR        shift, and go to state 67
+    DECR        shift, and go to state 68
+    '('         shift, and go to state 69
+
+    const_value        go to state 70
+    ref_val            go to state 71
+    function_call      go to state 72
+    calc_statement     go to state 73
+    numeric_val        go to state 74
+    arhimetic_operand  go to state 75
+    arhimetic_expr     go to state 76
+    expr               go to state 152
+
+
 State 106
 
-   97 member_declarations: STATIC variable_dec .
+   96 member_declarations: STATIC variable_dec .
 
-    $default  reduce using rule 97 (member_declarations)
+    $default  reduce using rule 96 (member_declarations)
 
 
 State 107
 
-   99 member_declarations: STATIC function_dec .
+   98 member_declarations: STATIC function_dec .
 
-    $default  reduce using rule 99 (member_declarations)
+    $default  reduce using rule 98 (member_declarations)
 
 
 State 108
 
-   95 acces_modifier: ACCESMODIF ':' .
+   94 acces_modifier: ACCESMODIF ':' .
 
-    $default  reduce using rule 95 (acces_modifier)
+    $default  reduce using rule 94 (acces_modifier)
 
 
 State 109
 
-  101 struct_member: acces_modifier member_declarations .
+  100 struct_member: acces_modifier member_declarations .
 
-    $default  reduce using rule 101 (struct_member)
+    $default  reduce using rule 100 (struct_member)
 
 
 State 110
 
     9 variable_idendifier: . ID
    10                    | . variable_idendifier ',' ID
-  105 struct_head: ID '{' struct_body '}' .  [';']
-  106            | ID '{' struct_body '}' . variable_idendifier
+  104 struct_head: ID '{' struct_body '}' .  [';']
+  105            | ID '{' struct_body '}' . variable_idendifier
 
-    ID  shift, and go to state 152
+    ID  shift, and go to state 153
 
-    $default  reduce using rule 105 (struct_head)
+    $default  reduce using rule 104 (struct_head)
 
-    variable_idendifier  go to state 153
+    variable_idendifier  go to state 154
 
 
 State 111
 
-  103 struct_body: struct_body struct_member .
+  102 struct_body: struct_body struct_member .
 
-    $default  reduce using rule 103 (struct_body)
+    $default  reduce using rule 102 (struct_body)
 
 
 State 112
 
    39 calc_statement: CALC '(' . '"' arhimetic_expr '"' ')' ';'
 
-    '"'  shift, and go to state 154
+    '"'  shift, and go to state 155
 
 
 State 113
 
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-   70                  | INCR arhimetic_operand .  [EQUAL, NOT_EQ, LOWER_EQ, GREATER_EQ, GREATER, LOWER, AND, OR, MUL, DIV, MOD, ADD, MIN, INCR, DECR, ',', ';', ')', '"']
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+   69                  | INCR arhimetic_operand .  [EQUAL, NOT_EQ, LOWER_EQ, GREATER_EQ, GREATER, LOWER, AND, OR, MUL, DIV, MOD, ADD, MIN, INCR, DECR, ',', ';', ')', '"']
+
+    $default  reduce using rule 69 (arhimetic_operand)
+
+    Conflict between rule 69 and token INCR resolved as reduce (%left INCR).
+    Conflict between rule 69 and token DECR resolved as reduce (%left DECR).
+
+
+State 114
+
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+   70                  | DECR arhimetic_operand .  [EQUAL, NOT_EQ, LOWER_EQ, GREATER_EQ, GREATER, LOWER, AND, OR, MUL, DIV, MOD, ADD, MIN, INCR, DECR, ',', ';', ')', '"']
 
     $default  reduce using rule 70 (arhimetic_operand)
 
@@ -2436,23 +2440,11 @@ State 113
     Conflict between rule 70 and token DECR resolved as reduce (%left DECR).
 
 
-State 114
-
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-   71                  | DECR arhimetic_operand .  [EQUAL, NOT_EQ, LOWER_EQ, GREATER_EQ, GREATER, LOWER, AND, OR, MUL, DIV, MOD, ADD, MIN, INCR, DECR, ',', ';', ')', '"']
-
-    $default  reduce using rule 71 (arhimetic_operand)
-
-    Conflict between rule 71 and token INCR resolved as reduce (%left INCR).
-    Conflict between rule 71 and token DECR resolved as reduce (%left DECR).
-
-
 State 115
 
-   72 arhimetic_operand: '(' arhimetic_expr . ')'
+   71 arhimetic_operand: '(' arhimetic_expr . ')'
 
-    ')'  shift, and go to state 155
+    ')'  shift, and go to state 156
 
 
 State 116
@@ -2467,56 +2459,16 @@ State 116
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   76 arhimetic_expr: arhimetic_operand MUL . arhimetic_operand
-
-    ID          shift, and go to state 34
-    BOOL_VAL    shift, and go to state 61
-    CHAR_VAL    shift, and go to state 62
-    STRING_VAL  shift, and go to state 63
-    INT_VAL     shift, and go to state 64
-    DOUBLE_VAL  shift, and go to state 65
-    INCR        shift, and go to state 67
-    DECR        shift, and go to state 68
-    '('         shift, and go to state 69
-
-    const_value        go to state 70
-    ref_val            go to state 71
-    function_call      go to state 72
-    numeric_val        go to state 74
-    arhimetic_operand  go to state 156
-
-
-State 117
-
-    4 const_value: . INT_VAL
-    5            | . CHAR_VAL
-    6            | . STRING_VAL
-    7            | . BOOL_VAL
-    8            | . DOUBLE_VAL
-   23 ref_val: . ID
-   24        | . ID PMEM ID
-   25        | . ID '.' ID
-   28 function_call: . ID '(' caller_params ')' ';'
-   29              | . ID '(' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   77 arhimetic_expr: arhimetic_operand DIV . arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   75 arhimetic_expr: arhimetic_operand MUL . arhimetic_operand
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -2535,7 +2487,7 @@ State 117
     arhimetic_operand  go to state 157
 
 
-State 118
+State 117
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
@@ -2547,16 +2499,16 @@ State 118
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   78 arhimetic_expr: arhimetic_operand MOD . arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   76 arhimetic_expr: arhimetic_operand DIV . arhimetic_operand
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -2575,7 +2527,7 @@ State 118
     arhimetic_operand  go to state 158
 
 
-State 119
+State 118
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
@@ -2587,16 +2539,16 @@ State 119
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   74 arhimetic_expr: arhimetic_operand ADD . arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   77 arhimetic_expr: arhimetic_operand MOD . arhimetic_operand
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -2615,7 +2567,7 @@ State 119
     arhimetic_operand  go to state 159
 
 
-State 120
+State 119
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
@@ -2627,16 +2579,16 @@ State 120
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   75 arhimetic_expr: arhimetic_operand MIN . arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   73 arhimetic_expr: arhimetic_operand ADD . arhimetic_operand
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -2655,18 +2607,58 @@ State 120
     arhimetic_operand  go to state 160
 
 
+State 120
+
+    4 const_value: . INT_VAL
+    5            | . CHAR_VAL
+    6            | . STRING_VAL
+    7            | . BOOL_VAL
+    8            | . DOUBLE_VAL
+   23 ref_val: . ID
+   24        | . ID PMEM ID
+   25        | . ID '.' ID
+   28 function_call: . ID '(' caller_params ')' ';'
+   29              | . ID '(' ')' ';'
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   74 arhimetic_expr: arhimetic_operand MIN . arhimetic_operand
+
+    ID          shift, and go to state 34
+    BOOL_VAL    shift, and go to state 61
+    CHAR_VAL    shift, and go to state 62
+    STRING_VAL  shift, and go to state 63
+    INT_VAL     shift, and go to state 64
+    DOUBLE_VAL  shift, and go to state 65
+    INCR        shift, and go to state 67
+    DECR        shift, and go to state 68
+    '('         shift, and go to state 69
+
+    const_value        go to state 70
+    ref_val            go to state 71
+    function_call      go to state 72
+    numeric_val        go to state 74
+    arhimetic_operand  go to state 161
+
+
 State 121
 
-   68 arhimetic_operand: arhimetic_operand INCR .
+   67 arhimetic_operand: arhimetic_operand INCR .
 
-    $default  reduce using rule 68 (arhimetic_operand)
+    $default  reduce using rule 67 (arhimetic_operand)
 
 
 State 122
 
-   69 arhimetic_operand: arhimetic_operand DECR .
+   68 arhimetic_operand: arhimetic_operand DECR .
 
-    $default  reduce using rule 69 (arhimetic_operand)
+    $default  reduce using rule 68 (arhimetic_operand)
 
 
 State 123
@@ -2678,12 +2670,12 @@ State 123
 
 State 124
 
-   81 no_parameter: data_type ID .  [',', ')']
-   82 op_parameter: data_type ID . ASSIGN const_value
+   80 no_parameter: data_type ID .  [',', ')']
+   81 op_parameter: data_type ID . ASSIGN const_value
 
-    ASSIGN  shift, and go to state 161
+    ASSIGN  shift, and go to state 162
 
-    $default  reduce using rule 81 (no_parameter)
+    $default  reduce using rule 80 (no_parameter)
 
 
 State 125
@@ -2691,18 +2683,18 @@ State 125
     1 data_type: . TRIVIAL_TIP
     2          | . SIGN_TIP
     3          | . TIP_SIGN SIGN_TIP
-   81 no_parameter: . data_type ID
-   83 no_parameter_list: . no_parameter
-   84                  | . no_parameter ',' no_parameter_list
-   84                  | no_parameter ',' . no_parameter_list
+   80 no_parameter: . data_type ID
+   82 no_parameter_list: . no_parameter
+   83                  | . no_parameter ',' no_parameter_list
+   83                  | no_parameter ',' . no_parameter_list
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
     TIP_SIGN     shift, and go to state 3
 
-    data_type          go to state 162
+    data_type          go to state 163
     no_parameter       go to state 80
-    no_parameter_list  go to state 163
+    no_parameter_list  go to state 164
 
 
 State 126
@@ -2710,14 +2702,14 @@ State 126
     1 data_type: . TRIVIAL_TIP
     2          | . SIGN_TIP
     3          | . TIP_SIGN SIGN_TIP
-   81 no_parameter: . data_type ID
-   82 op_parameter: . data_type ID ASSIGN const_value
-   83 no_parameter_list: . no_parameter
-   84                  | . no_parameter ',' no_parameter_list
-   85 op_parameter_list: . op_parameter ',' op_parameter_list
-   85                  | op_parameter ',' . op_parameter_list
-   86                  | . no_parameter_list
-   87                  | . op_parameter
+   80 no_parameter: . data_type ID
+   81 op_parameter: . data_type ID ASSIGN const_value
+   82 no_parameter_list: . no_parameter
+   83                  | . no_parameter ',' no_parameter_list
+   84 op_parameter_list: . op_parameter ',' op_parameter_list
+   84                  | op_parameter ',' . op_parameter_list
+   85                  | . no_parameter_list
+   86                  | . op_parameter
 
     SIGN_TIP     shift, and go to state 1
     TRIVIAL_TIP  shift, and go to state 2
@@ -2727,14 +2719,14 @@ State 126
     no_parameter       go to state 80
     op_parameter       go to state 81
     no_parameter_list  go to state 82
-    op_parameter_list  go to state 164
+    op_parameter_list  go to state 165
 
 
 State 127
 
-   89 function_head: data_type ID '(' parameter_list ')' .
+   88 function_head: data_type ID '(' parameter_list ')' .
 
-    $default  reduce using rule 89 (function_head)
+    $default  reduce using rule 88 (function_head)
 
 
 State 128
@@ -2755,14 +2747,14 @@ State 130
 
    29 function_call: ID '(' ')' . ';'
 
-    ';'  shift, and go to state 165
+    ';'  shift, and go to state 166
 
 
 State 131
 
    28 function_call: ID '(' caller_params . ')' ';'
 
-    ')'  shift, and go to state 166
+    ')'  shift, and go to state 167
 
 
 State 132
@@ -2770,7 +2762,7 @@ State 132
    26 caller_params: expr .  [')']
    27              | expr . ',' caller_params
 
-    ','  shift, and go to state 167
+    ','  shift, and go to state 168
 
     $default  reduce using rule 26 (caller_params)
 
@@ -2788,21 +2780,21 @@ State 133
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
    38 eval_statement: EVAL '(' '"' . arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -2819,62 +2811,20 @@ State 133
     function_call      go to state 72
     numeric_val        go to state 74
     arhimetic_operand  go to state 75
-    arhimetic_expr     go to state 168
+    arhimetic_expr     go to state 169
 
 
 State 134
 
-    4 const_value: . INT_VAL
-    5            | . CHAR_VAL
-    6            | . STRING_VAL
-    7            | . BOOL_VAL
-    8            | . DOUBLE_VAL
-   23 ref_val: . ID
-   24        | . ID PMEM ID
-   25        | . ID '.' ID
-   28 function_call: . ID '(' caller_params ')' ';'
-   29              | . ID '(' ')' ';'
-   52 lo_operand: . lo_expr
-   53           | . '(' lo_expr ')'
-   54 lo_expr: . NOT lo_operand
-   54        | NOT . lo_operand
-   55        | . lo_operand AND lo_operand
-   56        | . lo_operand OR lo_operand
-   57        | . lo_operand
-   58        | . arhimetic_operand GREATER arhimetic_operand
-   59        | . arhimetic_operand LOWER arhimetic_operand
-   60        | . arhimetic_operand EQUAL arhimetic_operand
-   61        | . arhimetic_operand NOT_EQ arhimetic_operand
-   62        | . arhimetic_operand LOWER_EQ arhimetic_operand
-   63        | . arhimetic_operand GREATER_EQ arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+    7 const_value: BOOL_VAL .  [EQUAL, NOT_EQ, LOWER_EQ, GREATER_EQ, GREATER, LOWER, MUL, DIV, MOD, ADD, MIN, INCR, DECR, ')']
+   61 lo_expr: BOOL_VAL .  [AND, OR, ';', ')']
 
-    ID          shift, and go to state 34
-    BOOL_VAL    shift, and go to state 61
-    CHAR_VAL    shift, and go to state 62
-    STRING_VAL  shift, and go to state 63
-    INT_VAL     shift, and go to state 64
-    DOUBLE_VAL  shift, and go to state 65
-    NOT         shift, and go to state 134
-    INCR        shift, and go to state 67
-    DECR        shift, and go to state 68
-    '('         shift, and go to state 135
-
-    const_value        go to state 70
-    ref_val            go to state 71
-    function_call      go to state 72
-    lo_operand         go to state 169
-    lo_expr            go to state 137
-    numeric_val        go to state 74
-    arhimetic_operand  go to state 138
+    AND       reduce using rule 61 (lo_expr)
+    OR        reduce using rule 61 (lo_expr)
+    ';'       reduce using rule 61 (lo_expr)
+    ')'       reduce using rule 7 (const_value)
+    ')'       [reduce using rule 61 (lo_expr)]
+    $default  reduce using rule 7 (const_value)
 
 
 State 135
@@ -2889,90 +2839,137 @@ State 135
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   52 lo_operand: . lo_expr
-   53           | . '(' lo_expr ')'
-   53           | '(' . lo_expr ')'
-   54 lo_expr: . NOT lo_operand
-   55        | . lo_operand AND lo_operand
-   56        | . lo_operand OR lo_operand
-   57        | . lo_operand
-   58        | . arhimetic_operand GREATER arhimetic_operand
-   59        | . arhimetic_operand LOWER arhimetic_operand
-   60        | . arhimetic_operand EQUAL arhimetic_operand
-   61        | . arhimetic_operand NOT_EQ arhimetic_operand
-   62        | . arhimetic_operand LOWER_EQ arhimetic_operand
-   63        | . arhimetic_operand GREATER_EQ arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   72                  | '(' . arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
+   52 lo_expr: . NOT lo_expr
+   52        | NOT . lo_expr
+   53        | . lo_expr AND lo_expr
+   54        | . lo_expr OR lo_expr
+   55        | . arhimetic_operand GREATER arhimetic_operand
+   56        | . arhimetic_operand LOWER arhimetic_operand
+   57        | . arhimetic_operand EQUAL arhimetic_operand
+   58        | . arhimetic_operand NOT_EQ arhimetic_operand
+   59        | . arhimetic_operand LOWER_EQ arhimetic_operand
+   60        | . arhimetic_operand GREATER_EQ arhimetic_operand
+   61        | . BOOL_VAL
+   62        | . '(' lo_expr ')'
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
-    BOOL_VAL    shift, and go to state 61
+    BOOL_VAL    shift, and go to state 134
     CHAR_VAL    shift, and go to state 62
     STRING_VAL  shift, and go to state 63
     INT_VAL     shift, and go to state 64
     DOUBLE_VAL  shift, and go to state 65
-    NOT         shift, and go to state 134
+    NOT         shift, and go to state 135
     INCR        shift, and go to state 67
     DECR        shift, and go to state 68
-    '('         shift, and go to state 135
+    '('         shift, and go to state 136
 
     const_value        go to state 70
     ref_val            go to state 71
     function_call      go to state 72
-    lo_operand         go to state 170
+    lo_expr            go to state 170
+    numeric_val        go to state 74
+    arhimetic_operand  go to state 139
+
+
+State 136
+
+    4 const_value: . INT_VAL
+    5            | . CHAR_VAL
+    6            | . STRING_VAL
+    7            | . BOOL_VAL
+    8            | . DOUBLE_VAL
+   23 ref_val: . ID
+   24        | . ID PMEM ID
+   25        | . ID '.' ID
+   28 function_call: . ID '(' caller_params ')' ';'
+   29              | . ID '(' ')' ';'
+   52 lo_expr: . NOT lo_expr
+   53        | . lo_expr AND lo_expr
+   54        | . lo_expr OR lo_expr
+   55        | . arhimetic_operand GREATER arhimetic_operand
+   56        | . arhimetic_operand LOWER arhimetic_operand
+   57        | . arhimetic_operand EQUAL arhimetic_operand
+   58        | . arhimetic_operand NOT_EQ arhimetic_operand
+   59        | . arhimetic_operand LOWER_EQ arhimetic_operand
+   60        | . arhimetic_operand GREATER_EQ arhimetic_operand
+   61        | . BOOL_VAL
+   62        | . '(' lo_expr ')'
+   62        | '(' . lo_expr ')'
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   71                  | '(' . arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+
+    ID          shift, and go to state 34
+    BOOL_VAL    shift, and go to state 134
+    CHAR_VAL    shift, and go to state 62
+    STRING_VAL  shift, and go to state 63
+    INT_VAL     shift, and go to state 64
+    DOUBLE_VAL  shift, and go to state 65
+    NOT         shift, and go to state 135
+    INCR        shift, and go to state 67
+    DECR        shift, and go to state 68
+    '('         shift, and go to state 136
+
+    const_value        go to state 70
+    ref_val            go to state 71
+    function_call      go to state 72
     lo_expr            go to state 171
     numeric_val        go to state 74
     arhimetic_operand  go to state 172
     arhimetic_expr     go to state 115
 
 
-State 136
-
-   46 condition: '(' lo_operand . ')'
-   55 lo_expr: lo_operand . AND lo_operand
-   56        | lo_operand . OR lo_operand
-   57        | lo_operand .  [AND, OR, ')']
-
-    AND  shift, and go to state 173
-    OR   shift, and go to state 174
-    ')'  shift, and go to state 175
-
-    AND  [reduce using rule 57 (lo_expr)]
-    OR   [reduce using rule 57 (lo_expr)]
-    ')'  [reduce using rule 57 (lo_expr)]
-
-
 State 137
 
-   52 lo_operand: lo_expr .
+   46 condition: '(' stop_cond . ')'
 
-    $default  reduce using rule 52 (lo_operand)
+    ')'  shift, and go to state 173
 
 
 State 138
 
-   58 lo_expr: arhimetic_operand . GREATER arhimetic_operand
-   59        | arhimetic_operand . LOWER arhimetic_operand
-   60        | arhimetic_operand . EQUAL arhimetic_operand
-   61        | arhimetic_operand . NOT_EQ arhimetic_operand
-   62        | arhimetic_operand . LOWER_EQ arhimetic_operand
-   63        | arhimetic_operand . GREATER_EQ arhimetic_operand
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
+   42 stop_cond: lo_expr .  [';', ')']
+   53 lo_expr: lo_expr . AND lo_expr
+   54        | lo_expr . OR lo_expr
+
+    AND  shift, and go to state 174
+    OR   shift, and go to state 175
+
+    $default  reduce using rule 42 (stop_cond)
+
+
+State 139
+
+   55 lo_expr: arhimetic_operand . GREATER arhimetic_operand
+   56        | arhimetic_operand . LOWER arhimetic_operand
+   57        | arhimetic_operand . EQUAL arhimetic_operand
+   58        | arhimetic_operand . NOT_EQ arhimetic_operand
+   59        | arhimetic_operand . LOWER_EQ arhimetic_operand
+   60        | arhimetic_operand . GREATER_EQ arhimetic_operand
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
 
     EQUAL       shift, and go to state 176
     NOT_EQ      shift, and go to state 177
@@ -2984,7 +2981,7 @@ State 138
     DECR        shift, and go to state 122
 
 
-State 139
+State 140
 
    50 if_statement: IF condition block . ELSE block
    51             | IF condition block .  [SIGN_TIP, TRIVIAL_TIP, TIP_SIGN, ID, EVAL, IF, ELSE, WHILE, DO, FOR, ';', '}']
@@ -2995,14 +2992,14 @@ State 139
     $default  reduce using rule 51 (if_statement)
 
 
-State 140
+State 141
 
    49 while_statement: WHILE condition block .
 
     $default  reduce using rule 49 (while_statement)
 
 
-State 141
+State 142
 
     1 data_type: . TRIVIAL_TIP
     2          | . SIGN_TIP
@@ -3061,9 +3058,9 @@ State 141
     if_statement       go to state 51
 
 
-State 142
+State 143
 
-   46 condition: . '(' lo_operand ')'
+   46 condition: . '(' stop_cond ')'
    48 dowhile_statement: DO block WHILE . condition ';'
 
     '('  shift, and go to state 90
@@ -3071,87 +3068,87 @@ State 142
     condition  go to state 184
 
 
-State 143
+State 144
 
    40 loop_init: statement .
 
     $default  reduce using rule 40 (loop_init)
 
 
-State 144
+State 145
 
    47 for_statement: FOR '(' loop_init . ';' stop_cond ';' loop_step ')' block
 
     ';'  shift, and go to state 185
 
 
-State 145
-
-   92 function_def: function_head '{' statement_list '}' ';' .
-
-    $default  reduce using rule 92 (function_def)
-
-
 State 146
+
+   91 function_def: function_head '{' statement_list '}' ';' .
+
+    $default  reduce using rule 91 (function_def)
+
+
+State 147
 
    32 asign_statement: ref_val ASSIGN expr . ';'
 
     ';'  shift, and go to state 186
 
 
-State 147
+State 148
 
    33 asign_statement: ref_val MUL_ASSIGN expr . ';'
 
     ';'  shift, and go to state 187
 
 
-State 148
+State 149
 
    34 asign_statement: ref_val MOD_ASSIGN expr . ';'
 
     ';'  shift, and go to state 188
 
 
-State 149
+State 150
 
    35 asign_statement: ref_val ADD_ASSIGN expr . ';'
 
     ';'  shift, and go to state 189
 
 
-State 150
+State 151
 
    36 asign_statement: ref_val MIN_ASSIGN expr . ';'
 
     ';'  shift, and go to state 190
 
 
-State 151
+State 152
 
    37 asign_statement: ref_val DIV_ASSIGN expr . ';'
 
     ';'  shift, and go to state 191
 
 
-State 152
+State 153
 
     9 variable_idendifier: ID .
 
     $default  reduce using rule 9 (variable_idendifier)
 
 
-State 153
+State 154
 
    10 variable_idendifier: variable_idendifier . ',' ID
-  106 struct_head: ID '{' struct_body '}' variable_idendifier .  [';']
+  105 struct_head: ID '{' struct_body '}' variable_idendifier .  [';']
 
     ','  shift, and go to state 32
 
-    $default  reduce using rule 106 (struct_head)
+    $default  reduce using rule 105 (struct_head)
 
 
-State 154
+State 155
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
@@ -3164,21 +3161,21 @@ State 154
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
    39 calc_statement: CALC '(' '"' . arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -3198,66 +3195,18 @@ State 154
     arhimetic_expr     go to state 192
 
 
-State 155
-
-   72 arhimetic_operand: '(' arhimetic_expr ')' .
-
-    $default  reduce using rule 72 (arhimetic_operand)
-
-
 State 156
 
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-   76 arhimetic_expr: arhimetic_operand MUL arhimetic_operand .  [',', ';', ')', '"']
+   71 arhimetic_operand: '(' arhimetic_expr ')' .
 
-    INCR  shift, and go to state 121
-    DECR  shift, and go to state 122
-
-    $default  reduce using rule 76 (arhimetic_expr)
+    $default  reduce using rule 71 (arhimetic_operand)
 
 
 State 157
 
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-   77 arhimetic_expr: arhimetic_operand DIV arhimetic_operand .  [',', ';', ')', '"']
-
-    INCR  shift, and go to state 121
-    DECR  shift, and go to state 122
-
-    $default  reduce using rule 77 (arhimetic_expr)
-
-
-State 158
-
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-   78 arhimetic_expr: arhimetic_operand MOD arhimetic_operand .  [',', ';', ')', '"']
-
-    INCR  shift, and go to state 121
-    DECR  shift, and go to state 122
-
-    $default  reduce using rule 78 (arhimetic_expr)
-
-
-State 159
-
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-   74 arhimetic_expr: arhimetic_operand ADD arhimetic_operand .  [',', ';', ')', '"']
-
-    INCR  shift, and go to state 121
-    DECR  shift, and go to state 122
-
-    $default  reduce using rule 74 (arhimetic_expr)
-
-
-State 160
-
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-   75 arhimetic_expr: arhimetic_operand MIN arhimetic_operand .  [',', ';', ')', '"']
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+   75 arhimetic_expr: arhimetic_operand MUL arhimetic_operand .  [',', ';', ')', '"']
 
     INCR  shift, and go to state 121
     DECR  shift, and go to state 122
@@ -3265,14 +3214,62 @@ State 160
     $default  reduce using rule 75 (arhimetic_expr)
 
 
+State 158
+
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+   76 arhimetic_expr: arhimetic_operand DIV arhimetic_operand .  [',', ';', ')', '"']
+
+    INCR  shift, and go to state 121
+    DECR  shift, and go to state 122
+
+    $default  reduce using rule 76 (arhimetic_expr)
+
+
+State 159
+
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+   77 arhimetic_expr: arhimetic_operand MOD arhimetic_operand .  [',', ';', ')', '"']
+
+    INCR  shift, and go to state 121
+    DECR  shift, and go to state 122
+
+    $default  reduce using rule 77 (arhimetic_expr)
+
+
+State 160
+
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+   73 arhimetic_expr: arhimetic_operand ADD arhimetic_operand .  [',', ';', ')', '"']
+
+    INCR  shift, and go to state 121
+    DECR  shift, and go to state 122
+
+    $default  reduce using rule 73 (arhimetic_expr)
+
+
 State 161
+
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+   74 arhimetic_expr: arhimetic_operand MIN arhimetic_operand .  [',', ';', ')', '"']
+
+    INCR  shift, and go to state 121
+    DECR  shift, and go to state 122
+
+    $default  reduce using rule 74 (arhimetic_expr)
+
+
+State 162
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
     6            | . STRING_VAL
     7            | . BOOL_VAL
     8            | . DOUBLE_VAL
-   82 op_parameter: data_type ID ASSIGN . const_value
+   81 op_parameter: data_type ID ASSIGN . const_value
 
     BOOL_VAL    shift, and go to state 61
     CHAR_VAL    shift, and go to state 62
@@ -3283,42 +3280,42 @@ State 161
     const_value  go to state 193
 
 
-State 162
+State 163
 
-   81 no_parameter: data_type . ID
+   80 no_parameter: data_type . ID
 
     ID  shift, and go to state 194
 
 
-State 163
-
-   84 no_parameter_list: no_parameter ',' no_parameter_list .
-
-    $default  reduce using rule 84 (no_parameter_list)
-
-
 State 164
 
-   85 op_parameter_list: op_parameter ',' op_parameter_list .
+   83 no_parameter_list: no_parameter ',' no_parameter_list .
 
-    $default  reduce using rule 85 (op_parameter_list)
+    $default  reduce using rule 83 (no_parameter_list)
 
 
 State 165
+
+   84 op_parameter_list: op_parameter ',' op_parameter_list .
+
+    $default  reduce using rule 84 (op_parameter_list)
+
+
+State 166
 
    29 function_call: ID '(' ')' ';' .
 
     $default  reduce using rule 29 (function_call)
 
 
-State 166
+State 167
 
    28 function_call: ID '(' caller_params ')' . ';'
 
     ';'  shift, and go to state 195
 
 
-State 167
+State 168
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
@@ -3334,23 +3331,23 @@ State 167
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
    39 calc_statement: . CALC '(' '"' arhimetic_expr '"' ')' ';'
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
-   79 expr: . arhimetic_expr
-   80     | . calc_statement
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+   78 expr: . arhimetic_expr
+   79     | . calc_statement
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -3374,76 +3371,55 @@ State 167
     expr               go to state 132
 
 
-State 168
+State 169
 
    38 eval_statement: EVAL '(' '"' arhimetic_expr . '"' ')' ';'
 
     '"'  shift, and go to state 197
 
 
-State 169
-
-   54 lo_expr: NOT lo_operand .  [';', ')']
-   55        | lo_operand . AND lo_operand
-   56        | lo_operand . OR lo_operand
-   57        | lo_operand .  [AND, OR, ';', ')']
-
-    AND  shift, and go to state 173
-    OR   shift, and go to state 174
-
-    AND       [reduce using rule 57 (lo_expr)]
-    OR        [reduce using rule 57 (lo_expr)]
-    ';'       reduce using rule 54 (lo_expr)
-    ';'       [reduce using rule 57 (lo_expr)]
-    ')'       reduce using rule 54 (lo_expr)
-    ')'       [reduce using rule 57 (lo_expr)]
-    $default  reduce using rule 54 (lo_expr)
-
-    Conflict between rule 54 and token AND resolved as shift (NOT < AND).
-    Conflict between rule 54 and token OR resolved as shift (NOT < OR).
-
-
 State 170
 
-   55 lo_expr: lo_operand . AND lo_operand
-   56        | lo_operand . OR lo_operand
-   57        | lo_operand .  [AND, OR, ')']
+   52 lo_expr: NOT lo_expr .  [';', ')']
+   53        | lo_expr . AND lo_expr
+   54        | lo_expr . OR lo_expr
 
-    AND  shift, and go to state 173
-    OR   shift, and go to state 174
+    AND  shift, and go to state 174
+    OR   shift, and go to state 175
 
-    AND       [reduce using rule 57 (lo_expr)]
-    OR        [reduce using rule 57 (lo_expr)]
-    $default  reduce using rule 57 (lo_expr)
+    $default  reduce using rule 52 (lo_expr)
+
+    Conflict between rule 52 and token AND resolved as shift (NOT < AND).
+    Conflict between rule 52 and token OR resolved as shift (NOT < OR).
 
 
 State 171
 
-   52 lo_operand: lo_expr .  [AND, OR, ')']
-   53           | '(' lo_expr . ')'
+   53 lo_expr: lo_expr . AND lo_expr
+   54        | lo_expr . OR lo_expr
+   62        | '(' lo_expr . ')'
 
+    AND  shift, and go to state 174
+    OR   shift, and go to state 175
     ')'  shift, and go to state 198
-
-    ')'       [reduce using rule 52 (lo_operand)]
-    $default  reduce using rule 52 (lo_operand)
 
 
 State 172
 
-   58 lo_expr: arhimetic_operand . GREATER arhimetic_operand
-   59        | arhimetic_operand . LOWER arhimetic_operand
-   60        | arhimetic_operand . EQUAL arhimetic_operand
-   61        | arhimetic_operand . NOT_EQ arhimetic_operand
-   62        | arhimetic_operand . LOWER_EQ arhimetic_operand
-   63        | arhimetic_operand . GREATER_EQ arhimetic_operand
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-   73 arhimetic_expr: arhimetic_operand .  [')']
-   74               | arhimetic_operand . ADD arhimetic_operand
-   75               | arhimetic_operand . MIN arhimetic_operand
-   76               | arhimetic_operand . MUL arhimetic_operand
-   77               | arhimetic_operand . DIV arhimetic_operand
-   78               | arhimetic_operand . MOD arhimetic_operand
+   55 lo_expr: arhimetic_operand . GREATER arhimetic_operand
+   56        | arhimetic_operand . LOWER arhimetic_operand
+   57        | arhimetic_operand . EQUAL arhimetic_operand
+   58        | arhimetic_operand . NOT_EQ arhimetic_operand
+   59        | arhimetic_operand . LOWER_EQ arhimetic_operand
+   60        | arhimetic_operand . GREATER_EQ arhimetic_operand
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+   72 arhimetic_expr: arhimetic_operand .  [')']
+   73               | arhimetic_operand . ADD arhimetic_operand
+   74               | arhimetic_operand . MIN arhimetic_operand
+   75               | arhimetic_operand . MUL arhimetic_operand
+   76               | arhimetic_operand . DIV arhimetic_operand
+   77               | arhimetic_operand . MOD arhimetic_operand
 
     EQUAL       shift, and go to state 176
     NOT_EQ      shift, and go to state 177
@@ -3459,62 +3435,14 @@ State 172
     INCR        shift, and go to state 121
     DECR        shift, and go to state 122
 
-    $default  reduce using rule 73 (arhimetic_expr)
+    $default  reduce using rule 72 (arhimetic_expr)
 
 
 State 173
 
-    4 const_value: . INT_VAL
-    5            | . CHAR_VAL
-    6            | . STRING_VAL
-    7            | . BOOL_VAL
-    8            | . DOUBLE_VAL
-   23 ref_val: . ID
-   24        | . ID PMEM ID
-   25        | . ID '.' ID
-   28 function_call: . ID '(' caller_params ')' ';'
-   29              | . ID '(' ')' ';'
-   52 lo_operand: . lo_expr
-   53           | . '(' lo_expr ')'
-   54 lo_expr: . NOT lo_operand
-   55        | . lo_operand AND lo_operand
-   55        | lo_operand AND . lo_operand
-   56        | . lo_operand OR lo_operand
-   57        | . lo_operand
-   58        | . arhimetic_operand GREATER arhimetic_operand
-   59        | . arhimetic_operand LOWER arhimetic_operand
-   60        | . arhimetic_operand EQUAL arhimetic_operand
-   61        | . arhimetic_operand NOT_EQ arhimetic_operand
-   62        | . arhimetic_operand LOWER_EQ arhimetic_operand
-   63        | . arhimetic_operand GREATER_EQ arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   46 condition: '(' stop_cond ')' .
 
-    ID          shift, and go to state 34
-    BOOL_VAL    shift, and go to state 61
-    CHAR_VAL    shift, and go to state 62
-    STRING_VAL  shift, and go to state 63
-    INT_VAL     shift, and go to state 64
-    DOUBLE_VAL  shift, and go to state 65
-    NOT         shift, and go to state 134
-    INCR        shift, and go to state 67
-    DECR        shift, and go to state 68
-    '('         shift, and go to state 135
-
-    const_value        go to state 70
-    ref_val            go to state 71
-    function_call      go to state 72
-    lo_operand         go to state 199
-    lo_expr            go to state 137
-    numeric_val        go to state 74
-    arhimetic_operand  go to state 138
+    $default  reduce using rule 46 (condition)
 
 
 State 174
@@ -3529,54 +3457,98 @@ State 174
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   52 lo_operand: . lo_expr
-   53           | . '(' lo_expr ')'
-   54 lo_expr: . NOT lo_operand
-   55        | . lo_operand AND lo_operand
-   56        | . lo_operand OR lo_operand
-   56        | lo_operand OR . lo_operand
-   57        | . lo_operand
-   58        | . arhimetic_operand GREATER arhimetic_operand
-   59        | . arhimetic_operand LOWER arhimetic_operand
-   60        | . arhimetic_operand EQUAL arhimetic_operand
-   61        | . arhimetic_operand NOT_EQ arhimetic_operand
-   62        | . arhimetic_operand LOWER_EQ arhimetic_operand
-   63        | . arhimetic_operand GREATER_EQ arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   52 lo_expr: . NOT lo_expr
+   53        | . lo_expr AND lo_expr
+   53        | lo_expr AND . lo_expr
+   54        | . lo_expr OR lo_expr
+   55        | . arhimetic_operand GREATER arhimetic_operand
+   56        | . arhimetic_operand LOWER arhimetic_operand
+   57        | . arhimetic_operand EQUAL arhimetic_operand
+   58        | . arhimetic_operand NOT_EQ arhimetic_operand
+   59        | . arhimetic_operand LOWER_EQ arhimetic_operand
+   60        | . arhimetic_operand GREATER_EQ arhimetic_operand
+   61        | . BOOL_VAL
+   62        | . '(' lo_expr ')'
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
-    BOOL_VAL    shift, and go to state 61
+    BOOL_VAL    shift, and go to state 134
     CHAR_VAL    shift, and go to state 62
     STRING_VAL  shift, and go to state 63
     INT_VAL     shift, and go to state 64
     DOUBLE_VAL  shift, and go to state 65
-    NOT         shift, and go to state 134
+    NOT         shift, and go to state 135
     INCR        shift, and go to state 67
     DECR        shift, and go to state 68
-    '('         shift, and go to state 135
+    '('         shift, and go to state 136
 
     const_value        go to state 70
     ref_val            go to state 71
     function_call      go to state 72
-    lo_operand         go to state 200
-    lo_expr            go to state 137
+    lo_expr            go to state 199
     numeric_val        go to state 74
-    arhimetic_operand  go to state 138
+    arhimetic_operand  go to state 139
 
 
 State 175
 
-   46 condition: '(' lo_operand ')' .
+    4 const_value: . INT_VAL
+    5            | . CHAR_VAL
+    6            | . STRING_VAL
+    7            | . BOOL_VAL
+    8            | . DOUBLE_VAL
+   23 ref_val: . ID
+   24        | . ID PMEM ID
+   25        | . ID '.' ID
+   28 function_call: . ID '(' caller_params ')' ';'
+   29              | . ID '(' ')' ';'
+   52 lo_expr: . NOT lo_expr
+   53        | . lo_expr AND lo_expr
+   54        | . lo_expr OR lo_expr
+   54        | lo_expr OR . lo_expr
+   55        | . arhimetic_operand GREATER arhimetic_operand
+   56        | . arhimetic_operand LOWER arhimetic_operand
+   57        | . arhimetic_operand EQUAL arhimetic_operand
+   58        | . arhimetic_operand NOT_EQ arhimetic_operand
+   59        | . arhimetic_operand LOWER_EQ arhimetic_operand
+   60        | . arhimetic_operand GREATER_EQ arhimetic_operand
+   61        | . BOOL_VAL
+   62        | . '(' lo_expr ')'
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
-    $default  reduce using rule 46 (condition)
+    ID          shift, and go to state 34
+    BOOL_VAL    shift, and go to state 134
+    CHAR_VAL    shift, and go to state 62
+    STRING_VAL  shift, and go to state 63
+    INT_VAL     shift, and go to state 64
+    DOUBLE_VAL  shift, and go to state 65
+    NOT         shift, and go to state 135
+    INCR        shift, and go to state 67
+    DECR        shift, and go to state 68
+    '('         shift, and go to state 136
+
+    const_value        go to state 70
+    ref_val            go to state 71
+    function_call      go to state 72
+    lo_expr            go to state 200
+    numeric_val        go to state 74
+    arhimetic_operand  go to state 139
 
 
 State 176
@@ -3591,16 +3563,16 @@ State 176
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   60 lo_expr: arhimetic_operand EQUAL . arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   57 lo_expr: arhimetic_operand EQUAL . arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -3631,16 +3603,16 @@ State 177
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   61 lo_expr: arhimetic_operand NOT_EQ . arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   58 lo_expr: arhimetic_operand NOT_EQ . arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -3671,16 +3643,16 @@ State 178
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   62 lo_expr: arhimetic_operand LOWER_EQ . arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   59 lo_expr: arhimetic_operand LOWER_EQ . arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -3711,16 +3683,16 @@ State 179
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   63 lo_expr: arhimetic_operand GREATER_EQ . arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   60 lo_expr: arhimetic_operand GREATER_EQ . arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -3751,16 +3723,16 @@ State 180
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   58 lo_expr: arhimetic_operand GREATER . arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   55 lo_expr: arhimetic_operand GREATER . arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -3791,16 +3763,16 @@ State 181
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   59 lo_expr: arhimetic_operand LOWER . arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   56 lo_expr: arhimetic_operand LOWER . arhimetic_operand
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -3906,41 +3878,40 @@ State 185
    25        | . ID '.' ID
    28 function_call: . ID '(' caller_params ')' ';'
    29              | . ID '(' ')' ';'
-   42 stop_cond: . lo_operand
+   42 stop_cond: . lo_expr
    43          | . %empty  [';']
    47 for_statement: FOR '(' loop_init ';' . stop_cond ';' loop_step ')' block
-   52 lo_operand: . lo_expr
-   53           | . '(' lo_expr ')'
-   54 lo_expr: . NOT lo_operand
-   55        | . lo_operand AND lo_operand
-   56        | . lo_operand OR lo_operand
-   57        | . lo_operand
-   58        | . arhimetic_operand GREATER arhimetic_operand
-   59        | . arhimetic_operand LOWER arhimetic_operand
-   60        | . arhimetic_operand EQUAL arhimetic_operand
-   61        | . arhimetic_operand NOT_EQ arhimetic_operand
-   62        | . arhimetic_operand LOWER_EQ arhimetic_operand
-   63        | . arhimetic_operand GREATER_EQ arhimetic_operand
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
+   52 lo_expr: . NOT lo_expr
+   53        | . lo_expr AND lo_expr
+   54        | . lo_expr OR lo_expr
+   55        | . arhimetic_operand GREATER arhimetic_operand
+   56        | . arhimetic_operand LOWER arhimetic_operand
+   57        | . arhimetic_operand EQUAL arhimetic_operand
+   58        | . arhimetic_operand NOT_EQ arhimetic_operand
+   59        | . arhimetic_operand LOWER_EQ arhimetic_operand
+   60        | . arhimetic_operand GREATER_EQ arhimetic_operand
+   61        | . BOOL_VAL
+   62        | . '(' lo_expr ')'
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
 
     ID          shift, and go to state 34
-    BOOL_VAL    shift, and go to state 61
+    BOOL_VAL    shift, and go to state 134
     CHAR_VAL    shift, and go to state 62
     STRING_VAL  shift, and go to state 63
     INT_VAL     shift, and go to state 64
     DOUBLE_VAL  shift, and go to state 65
-    NOT         shift, and go to state 134
+    NOT         shift, and go to state 135
     INCR        shift, and go to state 67
     DECR        shift, and go to state 68
-    '('         shift, and go to state 135
+    '('         shift, and go to state 136
 
     $default  reduce using rule 43 (stop_cond)
 
@@ -3948,10 +3919,9 @@ State 185
     ref_val            go to state 71
     function_call      go to state 72
     stop_cond          go to state 209
-    lo_operand         go to state 210
-    lo_expr            go to state 137
+    lo_expr            go to state 138
     numeric_val        go to state 74
-    arhimetic_operand  go to state 138
+    arhimetic_operand  go to state 139
 
 
 State 186
@@ -4000,21 +3970,21 @@ State 192
 
    39 calc_statement: CALC '(' '"' arhimetic_expr . '"' ')' ';'
 
-    '"'  shift, and go to state 211
+    '"'  shift, and go to state 210
 
 
 State 193
 
-   82 op_parameter: data_type ID ASSIGN const_value .
+   81 op_parameter: data_type ID ASSIGN const_value .
 
-    $default  reduce using rule 82 (op_parameter)
+    $default  reduce using rule 81 (op_parameter)
 
 
 State 194
 
-   81 no_parameter: data_type ID .
+   80 no_parameter: data_type ID .
 
-    $default  reduce using rule 81 (no_parameter)
+    $default  reduce using rule 80 (no_parameter)
 
 
 State 195
@@ -4035,112 +4005,59 @@ State 197
 
    38 eval_statement: EVAL '(' '"' arhimetic_expr '"' . ')' ';'
 
-    ')'  shift, and go to state 212
+    ')'  shift, and go to state 211
 
 
 State 198
 
-   53 lo_operand: '(' lo_expr ')' .
-
-    $default  reduce using rule 53 (lo_operand)
-
-
-State 199
-
-   55 lo_expr: lo_operand . AND lo_operand
-   55        | lo_operand AND lo_operand .  [AND, ';', ')']
-   56        | lo_operand . OR lo_operand
-   57        | lo_operand .  [AND, OR, ';', ')']
-
-    OR  shift, and go to state 174
-
-    AND       reduce using rule 55 (lo_expr)
-    AND       [reduce using rule 57 (lo_expr)]
-    OR        [reduce using rule 57 (lo_expr)]
-    ';'       reduce using rule 55 (lo_expr)
-    ';'       [reduce using rule 57 (lo_expr)]
-    ')'       reduce using rule 55 (lo_expr)
-    ')'       [reduce using rule 57 (lo_expr)]
-    $default  reduce using rule 55 (lo_expr)
-
-    Conflict between rule 55 and token AND resolved as reduce (%left AND).
-    Conflict between rule 55 and token OR resolved as shift (AND < OR).
-
-
-State 200
-
-   55 lo_expr: lo_operand . AND lo_operand
-   56        | lo_operand . OR lo_operand
-   56        | lo_operand OR lo_operand .  [AND, OR, ';', ')']
-   57        | lo_operand .  [AND, OR, ';', ')']
-
-    AND       reduce using rule 56 (lo_expr)
-    AND       [reduce using rule 57 (lo_expr)]
-    OR        reduce using rule 56 (lo_expr)
-    OR        [reduce using rule 57 (lo_expr)]
-    ';'       reduce using rule 56 (lo_expr)
-    ';'       [reduce using rule 57 (lo_expr)]
-    ')'       reduce using rule 56 (lo_expr)
-    ')'       [reduce using rule 57 (lo_expr)]
-    $default  reduce using rule 56 (lo_expr)
-
-    Conflict between rule 56 and token AND resolved as reduce (AND < OR).
-    Conflict between rule 56 and token OR resolved as reduce (%left OR).
-
-
-State 201
-
-   60 lo_expr: arhimetic_operand EQUAL arhimetic_operand .  [AND, OR, ';', ')']
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-
-    INCR  shift, and go to state 121
-    DECR  shift, and go to state 122
-
-    $default  reduce using rule 60 (lo_expr)
-
-
-State 202
-
-   61 lo_expr: arhimetic_operand NOT_EQ arhimetic_operand .  [AND, OR, ';', ')']
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-
-    INCR  shift, and go to state 121
-    DECR  shift, and go to state 122
-
-    $default  reduce using rule 61 (lo_expr)
-
-
-State 203
-
-   62 lo_expr: arhimetic_operand LOWER_EQ arhimetic_operand .  [AND, OR, ';', ')']
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
-
-    INCR  shift, and go to state 121
-    DECR  shift, and go to state 122
+   62 lo_expr: '(' lo_expr ')' .
 
     $default  reduce using rule 62 (lo_expr)
 
 
-State 204
+State 199
 
-   63 lo_expr: arhimetic_operand GREATER_EQ arhimetic_operand .  [AND, OR, ';', ')']
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
+   53 lo_expr: lo_expr . AND lo_expr
+   53        | lo_expr AND lo_expr .  [AND, ';', ')']
+   54        | lo_expr . OR lo_expr
+
+    OR  shift, and go to state 175
+
+    $default  reduce using rule 53 (lo_expr)
+
+    Conflict between rule 53 and token AND resolved as reduce (%left AND).
+    Conflict between rule 53 and token OR resolved as shift (AND < OR).
+
+
+State 200
+
+   53 lo_expr: lo_expr . AND lo_expr
+   54        | lo_expr . OR lo_expr
+   54        | lo_expr OR lo_expr .  [AND, OR, ';', ')']
+
+    $default  reduce using rule 54 (lo_expr)
+
+    Conflict between rule 54 and token AND resolved as reduce (AND < OR).
+    Conflict between rule 54 and token OR resolved as reduce (%left OR).
+
+
+State 201
+
+   57 lo_expr: arhimetic_operand EQUAL arhimetic_operand .  [AND, OR, ';', ')']
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
 
     INCR  shift, and go to state 121
     DECR  shift, and go to state 122
 
-    $default  reduce using rule 63 (lo_expr)
+    $default  reduce using rule 57 (lo_expr)
 
 
-State 205
+State 202
 
-   58 lo_expr: arhimetic_operand GREATER arhimetic_operand .  [AND, OR, ';', ')']
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
+   58 lo_expr: arhimetic_operand NOT_EQ arhimetic_operand .  [AND, OR, ';', ')']
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
 
     INCR  shift, and go to state 121
     DECR  shift, and go to state 122
@@ -4148,16 +4065,52 @@ State 205
     $default  reduce using rule 58 (lo_expr)
 
 
-State 206
+State 203
 
-   59 lo_expr: arhimetic_operand LOWER arhimetic_operand .  [AND, OR, ';', ')']
-   68 arhimetic_operand: arhimetic_operand . INCR
-   69                  | arhimetic_operand . DECR
+   59 lo_expr: arhimetic_operand LOWER_EQ arhimetic_operand .  [AND, OR, ';', ')']
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
 
     INCR  shift, and go to state 121
     DECR  shift, and go to state 122
 
     $default  reduce using rule 59 (lo_expr)
+
+
+State 204
+
+   60 lo_expr: arhimetic_operand GREATER_EQ arhimetic_operand .  [AND, OR, ';', ')']
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+
+    INCR  shift, and go to state 121
+    DECR  shift, and go to state 122
+
+    $default  reduce using rule 60 (lo_expr)
+
+
+State 205
+
+   55 lo_expr: arhimetic_operand GREATER arhimetic_operand .  [AND, OR, ';', ')']
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+
+    INCR  shift, and go to state 121
+    DECR  shift, and go to state 122
+
+    $default  reduce using rule 55 (lo_expr)
+
+
+State 206
+
+   56 lo_expr: arhimetic_operand LOWER arhimetic_operand .  [AND, OR, ';', ')']
+   67 arhimetic_operand: arhimetic_operand . INCR
+   68                  | arhimetic_operand . DECR
+
+    INCR  shift, and go to state 121
+    DECR  shift, and go to state 122
+
+    $default  reduce using rule 56 (lo_expr)
 
 
 State 207
@@ -4178,41 +4131,24 @@ State 209
 
    47 for_statement: FOR '(' loop_init ';' stop_cond . ';' loop_step ')' block
 
-    ';'  shift, and go to state 213
+    ';'  shift, and go to state 212
 
 
 State 210
 
-   42 stop_cond: lo_operand .  [';']
-   55 lo_expr: lo_operand . AND lo_operand
-   56        | lo_operand . OR lo_operand
-   57        | lo_operand .  [AND, OR, ';']
+   39 calc_statement: CALC '(' '"' arhimetic_expr '"' . ')' ';'
 
-    AND  shift, and go to state 173
-    OR   shift, and go to state 174
-
-    AND       [reduce using rule 57 (lo_expr)]
-    OR        [reduce using rule 57 (lo_expr)]
-    ';'       reduce using rule 42 (stop_cond)
-    ';'       [reduce using rule 57 (lo_expr)]
-    $default  reduce using rule 42 (stop_cond)
+    ')'  shift, and go to state 213
 
 
 State 211
 
-   39 calc_statement: CALC '(' '"' arhimetic_expr '"' . ')' ';'
+   38 eval_statement: EVAL '(' '"' arhimetic_expr '"' ')' . ';'
 
-    ')'  shift, and go to state 214
+    ';'  shift, and go to state 214
 
 
 State 212
-
-   38 eval_statement: EVAL '(' '"' arhimetic_expr '"' ')' . ';'
-
-    ';'  shift, and go to state 215
-
-
-State 213
 
     4 const_value: . INT_VAL
     5            | . CHAR_VAL
@@ -4228,23 +4164,23 @@ State 213
    44 loop_step: . expr
    45          | . %empty  [')']
    47 for_statement: FOR '(' loop_init ';' stop_cond ';' . loop_step ')' block
-   64 numeric_val: . ref_val
-   65            | . function_call
-   66            | . const_value
-   67 arhimetic_operand: . numeric_val
-   68                  | . arhimetic_operand INCR
-   69                  | . arhimetic_operand DECR
-   70                  | . INCR arhimetic_operand
-   71                  | . DECR arhimetic_operand
-   72                  | . '(' arhimetic_expr ')'
-   73 arhimetic_expr: . arhimetic_operand
-   74               | . arhimetic_operand ADD arhimetic_operand
-   75               | . arhimetic_operand MIN arhimetic_operand
-   76               | . arhimetic_operand MUL arhimetic_operand
-   77               | . arhimetic_operand DIV arhimetic_operand
-   78               | . arhimetic_operand MOD arhimetic_operand
-   79 expr: . arhimetic_expr
-   80     | . calc_statement
+   63 numeric_val: . ref_val
+   64            | . function_call
+   65            | . const_value
+   66 arhimetic_operand: . numeric_val
+   67                  | . arhimetic_operand INCR
+   68                  | . arhimetic_operand DECR
+   69                  | . INCR arhimetic_operand
+   70                  | . DECR arhimetic_operand
+   71                  | . '(' arhimetic_expr ')'
+   72 arhimetic_expr: . arhimetic_operand
+   73               | . arhimetic_operand ADD arhimetic_operand
+   74               | . arhimetic_operand MIN arhimetic_operand
+   75               | . arhimetic_operand MUL arhimetic_operand
+   76               | . arhimetic_operand DIV arhimetic_operand
+   77               | . arhimetic_operand MOD arhimetic_operand
+   78 expr: . arhimetic_expr
+   79     | . calc_statement
 
     ID          shift, and go to state 34
     BOOL_VAL    shift, and go to state 61
@@ -4263,49 +4199,49 @@ State 213
     ref_val            go to state 71
     function_call      go to state 72
     calc_statement     go to state 73
-    loop_step          go to state 216
+    loop_step          go to state 215
     numeric_val        go to state 74
     arhimetic_operand  go to state 75
     arhimetic_expr     go to state 76
-    expr               go to state 217
+    expr               go to state 216
 
 
-State 214
+State 213
 
    39 calc_statement: CALC '(' '"' arhimetic_expr '"' ')' . ';'
 
-    ';'  shift, and go to state 218
+    ';'  shift, and go to state 217
 
 
-State 215
+State 214
 
    38 eval_statement: EVAL '(' '"' arhimetic_expr '"' ')' ';' .
 
     $default  reduce using rule 38 (eval_statement)
 
 
-State 216
+State 215
 
    47 for_statement: FOR '(' loop_init ';' stop_cond ';' loop_step . ')' block
 
-    ')'  shift, and go to state 219
+    ')'  shift, and go to state 218
 
 
-State 217
+State 216
 
    44 loop_step: expr .
 
     $default  reduce using rule 44 (loop_step)
 
 
-State 218
+State 217
 
    39 calc_statement: CALC '(' '"' arhimetic_expr '"' ')' ';' .
 
     $default  reduce using rule 39 (calc_statement)
 
 
-State 219
+State 218
 
     1 data_type: . TRIVIAL_TIP
     2          | . SIGN_TIP
@@ -4357,7 +4293,7 @@ State 219
     statement          go to state 94
     ref_val            go to state 44
     function_call      go to state 45
-    block              go to state 220
+    block              go to state 219
     asign_statement    go to state 46
     eval_statement     go to state 47
     for_statement      go to state 48
@@ -4366,7 +4302,7 @@ State 219
     if_statement       go to state 51
 
 
-State 220
+State 219
 
    47 for_statement: FOR '(' loop_init ';' stop_cond ';' loop_step ')' block .
 
