@@ -23,7 +23,6 @@
                             } else {
                                 yylval.num = atoi(yytext);
                             }
-                            printf("bool %d", yylval.num);
                             return BOOL_VAL;
                         }
 ([0-9]*[.])?[0-9]+      {

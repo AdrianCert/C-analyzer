@@ -1,6 +1,9 @@
 %{
      #include <stdio.h>
+     #include <stdlib.h>
+     #include <string.h>
 
+     #define MAXVAR 500
      int yylex();
 
      extern FILE * yyin;
@@ -8,7 +11,118 @@
      extern int yylineno;
 
      struct vartable {
-          char type[25]; 
+          char *type;
+          char *name;
+          char *value;
+          char *scope;
+          int dscope;
+          int fl_defined;
+          int fl_const;
+          int defined_line;
+     };
+
+     struct functtable {
+          char type[25];
+          char name[250];
+          char parmlist[1250];
+     };
+
+     struct vartable variable[MAXVAR];
+     struct functtable functions[MAXVAR];
+     int cvar = 0;
+     int cfun = 0;
+
+     int fl_main = 0;
+     int sc_curr = 0;
+     int scopedeep = 0;
+     char scopename[100];
+     char * indentifer_val;
+
+     int declaredvar(char * vname)
+     {
+          int i;
+          for(i = 0; i < cvar; i++)
+          {
+               if(scopedeep <= variable[i].dscope)
+               {
+                    if( strcmp(variable[i].name, vname) == 0)
+                    {
+                         return i;
+                    }
+               }
+          }
+          return -1;
+     }
+
+     void vdecrare_init(char *type, char *name, char *scope, char *value, int cnst )
+     {
+          int i;
+          if((i = declaredvar(name) ) >= 0)
+          {
+               printf("Variable (%s)%s is already defined at line %d", type, name, variable[i].defined_line);
+               exit(0);
+          }
+
+          variable[cvar].type = strdup(type);
+          variable[cvar].name = strdup(name);
+          variable[cvar].value = strdup(value);
+          variable[cvar].scope = strdup(scopename);
+          variable[cvar].dscope = scopedeep;
+          variable[cvar].fl_defined = 1;
+          variable[cvar].fl_const = cnst ? 1 : 0;
+          variable[cvar].defined_line = yylineno;
+          cvar++;
+     }
+
+     void vdecrare(char *type, char *name, char *scope, int cnst )
+     {
+          int i;
+          if((i = declaredvar(name) ) >= 0)
+          {
+               printf("Variable %s is already defined at line %d", name, variable[i].defined_line);
+               exit(0);
+          }
+          if(cnst)
+          {
+               printf("Variable is not allow define const without initalization\n");
+               exit(0);
+          }
+
+          variable[cvar].type = strdup(type);
+          variable[cvar].name = strdup(name);
+          variable[cvar].scope = strdup(scopename);
+          variable[cvar].dscope = scopedeep;
+          variable[cvar].fl_defined = 0;
+          variable[cvar].fl_const = cnst ? 1 : 0;
+          variable[cvar].defined_line = yylineno;
+          cvar++;
+     }
+
+     void printvtable(char *path)
+     {
+          FILE * file;
+          int i;
+
+          if (!(file = fopen(path, "w")))
+          {
+               exit(0);
+          }
+
+          for( i = 0; i < cvar; i++)
+          {
+               fprintf(file,
+                    "%s %s %s %s %d %d %d %d" ,
+                    variable[i].type,
+                    variable[i].name,
+                    variable[i].value,
+                    variable[i].scope,
+                    variable[i].dscope,
+                    variable[i].fl_defined,
+                    variable[i].fl_const,
+                    variable[i].defined_line );
+          }
+
+          fclose(file);
      }
 
      void yyerror(char * s)
@@ -65,7 +179,7 @@ const_value : INT_VAL { printf("y int reg %d \n", $1); $$ = $1; }
 
 variable_idendifier : ID {
                               char srt[100];
-                             // strcmd$$ = 
+                             // strcat($$ , "dsdf"); 
                          }
           | variable_idendifier ',' ID
           ;
