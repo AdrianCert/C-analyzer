@@ -8,30 +8,29 @@
 %option noyywrap
 
 %%
-("char"|"shot"|"short int"|"int"|"long"|"long int"|"long long"|"long long int"|"double"|"long double") { return SIGN_TIP; }
+("char"|"shot"|"short int"|"int"|"long"|"long int"|"long long"|"long long int"|"double"|"long double") { yylval.str = strdup(yytext); return SIGN_TIP; }
 "//".*          {}
 "/*.**/"        {} // "/* comm */"
 [/][*][^*]*[*]+([^*/][^*]*[*]+)*[/] {}
-("bool"|"void"|"wchar_t"|"float")   { return TRIVIAL_TIP;}
-("private"|"protected"|"public")    { return ACCESMODIF;}
-("signed"|"unsigned")   { return TIP_SIGN;}
-("false"|"true"|[01])   {
-                            if( strcmp(yytext, "false") == 0) {
-                                yylval.num = 0;
-                            } else if( strcmp(yytext, "true") == 0) {
-                                yylval.num = 1;
-                            } else {
-                                yylval.num = atoi(yytext);
-                            }
-                            return BOOL_VAL;
-                        }
+("bool"|"void"|"wchar_t"|"float")   { yylval.str = strdup(yytext); return TRIVIAL_TIP;}
+("private"|"protected"|"public")    { yylval.str = strdup(yytext); return ACCESMODIF;}
+"signed"                { yylval.num = 1; return TIP_SIGN;}
+"unsigned"              { yylval.num = 0; return TIP_SIGN;}
 ([0-9]*[.])?[0-9]+      {
-                            printf("l double\n");
+                            char *real, *zecim, *ch = strdup(yytext);
+
+                            real = strtok_r(ch, ".", &zecim);
+                            yylval.rnum = atoi(real);
+
+                            int k = 1;
+                            int n = strlen(zecim);
+                            while (n) { n--; k *= 10; }
+
+                            yylval.rnum += (double)atoi(zecim) / k;
                             return DOUBLE_VAL;
                         }
 (0|[+-]?[1-9][0-9]*)    {
                             yylval.num = atoi(yytext);
-                            printf("int %d", yylval.num);
                             return INT_VAL;
                         }
 "="                     { return ASSIGN; }
@@ -70,9 +69,9 @@
 "eval"                  { return EVAL; }
 "calc"                  { return CALC; }
 "class"                 { return CLASS; }
-[_a-zA-Z][_a-zA-Z0-9]*  { return ID; }
-['"].['"]               { return CHAR_VAL; }
-(["].*["])              { return STRING_VAL; }
+[_a-zA-Z][_a-zA-Z0-9]*  { yylval.str = strdup(yytext); return ID; }
+['"].['"]               { yylval.str = strdup(yytext); return CHAR_VAL; }
+(["].*["])              { yylval.str = strdup(yytext); return STRING_VAL; }
 [ \t]                   ;
 \n                      { yylineno++; }
 .                       { return yytext[0]; }

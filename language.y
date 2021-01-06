@@ -17,6 +17,7 @@
           char *scope;
           int dscope;
           int fl_defined;
+          int fl_sign;
           int fl_const;
           int defined_line;
      };
@@ -34,10 +35,17 @@
 
      int fl_main = 0;
      int sc_curr = 0;
-     int scopedeep = 0;
-     char scopename[100];
-     char * indentifer_val;
 
+     int fl_vsig;
+     int fl_var_const;
+     
+     int scopedeep = 0;
+     char * scopename;
+
+     char * indentifer_val;
+     char * tip = 0;
+     char * multiplev_name[10]; 
+     int multiplev_count = 0;
      int declaredvar(char * vname)
      {
           int i;
@@ -54,7 +62,7 @@
           return -1;
      }
 
-     void vdecrare_init(char *type, char *name, char *scope, char *value, int cnst )
+     void vdecrare_init(char *type, char *name, char *scope, char *value, int cnst, int sgn )
      {
           int i;
           if((i = declaredvar(name) ) >= 0)
@@ -70,11 +78,12 @@
           variable[cvar].dscope = scopedeep;
           variable[cvar].fl_defined = 1;
           variable[cvar].fl_const = cnst ? 1 : 0;
+          variable[cvar].fl_sign = sgn ? 1 : 0;
           variable[cvar].defined_line = yylineno;
           cvar++;
      }
 
-     void vdecrare(char *type, char *name, char *scope, int cnst )
+     void vdecrare(char *type, char *name, char *scope, int cnst, int sgn)
      {
           int i;
           if((i = declaredvar(name) ) >= 0)
@@ -94,6 +103,7 @@
           variable[cvar].dscope = scopedeep;
           variable[cvar].fl_defined = 0;
           variable[cvar].fl_const = cnst ? 1 : 0;
+          variable[cvar].fl_sign = sgn ? 1 : 0;
           variable[cvar].defined_line = yylineno;
           cvar++;
      }
@@ -111,13 +121,14 @@
           for( i = 0; i < cvar; i++)
           {
                fprintf(file,
-                    "%s %s %s %s %d %d %d %d" ,
+                    "%s %s %s %s %d %d %d %d %d" ,
                     variable[i].type,
                     variable[i].name,
                     variable[i].value,
                     variable[i].scope,
                     variable[i].dscope,
                     variable[i].fl_defined,
+                    variable[i].fl_sign,
                     variable[i].fl_const,
                     variable[i].defined_line );
           }
@@ -125,6 +136,11 @@
           fclose(file);
      }
 
+     void strrec( char *d, char *s)
+     {
+          if(d) free(d);
+          d = strdup(s);
+     }
      void yyerror(char * s)
      {
           printf("eroare: %s la linia:%d\n",s,yylineno);
@@ -133,7 +149,7 @@
 %}
 
 %token SIGN_TIP TRIVIAL_TIP TIP_SIGN ID 
-%token BOOL_VAL CHAR_VAL STRING_VAL INT_VAL DOUBLE_VAL
+%token CHAR_VAL STRING_VAL INT_VAL DOUBLE_VAL
 %token ASSIGN MUL_ASSIGN MOD_ASSIGN ADD_ASSIGN MIN_ASSIGN DIV_ASSIGN
 %token EQUAL NOT_EQ LOWER_EQ GREATER_EQ GREATER LOWER
 %token EVAL CALC
@@ -155,9 +171,29 @@
      double rnum;
 }
 
-%type <str> SIGN_TIP ID TRIVIAL_TIP CHAR_VAL STRING_VAL
-%type <num> BOOL_VAL INT_VAL lo_expr// lo_operand
-%type <rnum> DOUBLE_VAL arhimetic_expr expr ref_val const_value function_call calc_statement arhimetic_operand numeric_val
+%type <str> SIGN_TIP
+     TRIVIAL_TIP
+     CHAR_VAL
+     STRING_VAL
+     ID
+     const_string_value
+     const_value
+     str_exp_val
+     data_type
+
+%type <num> TIP_SIGN
+     INT_VAL
+     lo_expr
+
+%type <rnum> DOUBLE_VAL 
+     arhimetic_expr
+     expr
+     ref_val
+     function_call
+     calc_statement
+     arhimetic_operand
+     numeric_val
+     const_numeric_value
 
 %start begin
 
@@ -167,27 +203,49 @@
 /**************** GLOBAL RULES ********************************/
 /**************************************************************/
 
-data_type : TRIVIAL_TIP { printf("Fc %s", $1);}
-          | SIGN_TIP { printf("Fc %s", $1);}
-          | TIP_SIGN SIGN_TIP { printf("Fc %s", $2);}
+data_type : TRIVIAL_TIP            { strrec(tip,$1); fl_vsig = 0; }
+          | SIGN_TIP               { strrec(tip,$1); fl_vsig = 0; }
+          | TIP_SIGN SIGN_TIP      { strrec(tip,$2); fl_vsig = $1; }
           ;
 
-const_value : INT_VAL { printf("y int reg %d \n", $1); $$ = $1; }
-          | CHAR_VAL { printf("y char\n"); }
-          | STRING_VAL { printf("y string\n"); }
-          | BOOL_VAL { printf("y bool\n"); }
-          | DOUBLE_VAL { printf("y double\n"); }
+const_numeric_value : INT_VAL      { $$ = $1; }
+          | DOUBLE_VAL             { $$ = $1; }
           ;
 
-variable_idendifier : ID {
-                              char srt[100];
-                             // strcat($$ , "dsdf"); 
-                         }
-          | variable_idendifier ',' ID
+const_string_value : CHAR_VAL      { $$ = strdup($1); }
+          | STRING_VAL             { $$ = strdup($1); }
           ;
 
-variable_dec : data_type variable_idendifier ';' //{ printf("%s, $1"); }
-          | data_type ID ASSIGN expr ';' //{ printf("%s, $1"); }
+const_value : const_string_value   { $$ = strdup($1); }
+          | const_numeric_value    { sprintf( $$, "%lf", $1); }
+          ;
+
+str_exp_val : expr                 { sprintf( $$, "%lf", $1); }
+
+variable_idendifier : ID           { strrec(multiplev_name[multiplev_count++], $1); }
+          | variable_idendifier ',' ID { strrec(multiplev_name[multiplev_count++], $3); }
+          ;
+
+variable_dec : data_type variable_idendifier ';'  {
+                                                       int i;
+                                                       for(i = 0; i < multiplev_count; i++)
+                                                       {
+                                                            vdecrare($1, multiplev_name[i], scopename, 0, fl_vsig);
+                                                            strrec(multiplev_name[i], "-");
+                                                       }
+                                                       multiplev_count = 0;
+                                                  }
+          | CONST data_type variable_idendifier ';' {
+                                                       int i;
+                                                       for(i = 0; i < multiplev_count; i++)
+                                                       {
+                                                            vdecrare($2, multiplev_name[i], scopename, 1, fl_vsig);
+                                                            strrec(multiplev_name[i], "-");
+                                                       }
+                                                       multiplev_count = 0;
+                                                  }
+          | data_type ID ASSIGN str_exp_val ';'        { vdecrare_init($1, $2, scopename, $4, 0, fl_vsig); }
+          | CONST data_type ID ASSIGN str_exp_val ';'  { vdecrare_init($2, $3, scopename, $5, 0, fl_vsig); }
           ;
 
 statement : variable_dec
@@ -198,7 +256,13 @@ statement : variable_dec
           | dowhile_statement
           | asign_statement
           | eval_statement
+          | return_statement
+          | print_statement
           ;
+
+return_statement : RETURN expr ;
+
+print_statement : PRINT '(' caller_params ')' ';' ;
 
 statement_list : statement
           | statement_list statement
@@ -270,8 +334,13 @@ while_statement: WHILE condition block
 /**************** IF RULES ************************************/
 /**************************************************************/
 
-if_statement : IF condition block ELSE block
-          | IF condition block 
+if_head : IF condition block ;
+
+ if_else: ELSE block ;
+
+if_statement : 
+          if_head if_else
+          // | if_head
           ;
 
 /**************************************************************/
@@ -287,13 +356,12 @@ lo_expr : NOT lo_expr { $$ = !$2; }
           | arhimetic_operand NOT_EQ arhimetic_operand { $$ = $1 != $3; }
           | arhimetic_operand LOWER_EQ arhimetic_operand { $$ = $1 <= $3; }
           | arhimetic_operand GREATER_EQ arhimetic_operand { $$ = $1 >= $3; }
-          | BOOL_VAL { $$ = $1; }
           | '(' lo_expr ')' { $$ = $2; }
           ;
 
 numeric_val: ref_val { $$ = $1; }
           | function_call { $$ = $1; }
-          | const_value { $$ = $1; }
+          | const_numeric_value { $$ = $1; }
 
 arhimetic_operand : numeric_val { $$ = $1; }
           | arhimetic_operand INCR { $$ = $1++; }
@@ -389,13 +457,17 @@ declarations :
      | variable_dec
      ;
 
-begin     : declarations { printf("program corect sintactic\n"); }
+begin     : declarations { 
+                              printf("program corect sintactic\n");
+                              printvtable("s_table.txt");
+                         }
           ;
 
 %%
 
 int main(int argc, char** argv)
 {
+     scopename = strdup("GLOBAL");
      yyin=fopen(argv[1],"r");
      yyparse();
 } 
