@@ -155,7 +155,7 @@
 
 %type <str> SIGN_TIP ID TRIVIAL_TIP CHAR_VAL STRING_VAL
 %type <num> BOOL_VAL INT_VAL lo_expr lo_operand
-%type <rnum> DOUBLE_VAL arhimetic_expr expr ref_val const_value function_call calc_statement arhimetic_operand arhimetic_expr_r
+%type <rnum> DOUBLE_VAL arhimetic_expr expr ref_val const_value function_call calc_statement arhimetic_operand numeric_val
 
 %start begin
 
@@ -231,7 +231,7 @@ asign_statement : ref_val ASSIGN expr ';'
 /**************** EVAL & CALC RULES ***************************/
 /**************************************************************/
 
-eval_statement : EVAL '(' '"' arhimetic_expr '"'')' ';' { printf("ok"); }
+eval_statement : EVAL '(' '"' arhimetic_expr '"'')' ';' { printf("%lf", $4); }
 
 calc_statement : CALC '(' '"' arhimetic_expr '"' ')' ';' { $$ = $4; }
 
@@ -243,7 +243,7 @@ loop_init : statement
           |
           ;
 
-stop_cond : lo_expr
+stop_cond : lo_operand
           |
           ;
 
@@ -251,22 +251,25 @@ loop_step : expr
           |
           ;
 
+condition: '(' lo_operand ')'
+     ;
+
 for_statement : FOR '(' loop_init ';' stop_cond ';' loop_step ')' block ;
 
 /**************************************************************/
 /************* WHILE & DO WHILE RULES *************************/
 /**************************************************************/
 
-dowhile_statement : DO block WHILE '(' lo_expr ')' ';'
+dowhile_statement : DO block WHILE condition ';'
 
-while_statement: WHILE '(' stop_cond ')' block
+while_statement: WHILE condition block
 
 /**************************************************************/
 /**************** IF RULES ************************************/
 /**************************************************************/
 
-if_statement : IF '(' lo_expr ')' block
-          | IF '(' lo_expr ')' block ELSE block 
+if_statement : IF condition block
+          | IF condition block ELSE block 
           ;
 
 /**************************************************************/
@@ -282,58 +285,35 @@ lo_expr : NOT lo_operand { $$ = !$2; }
           | lo_operand OR lo_operand { $$ = $1 || $3; }
           | lo_operand { $$ = $1; }
           | '(' lo_expr ')' { $$ = $2; }
-          | arhimetic_expr GREATER arhimetic_expr { $$ = $1 > $3; }
-          | arhimetic_expr LOWER arhimetic_expr_r { $$ = $1 < $3; }
-          | arhimetic_expr EQUAL arhimetic_expr_r { $$ = $1 == $3; }
-          | arhimetic_expr NOT_EQ arhimetic_expr_r { $$ = $1 != $3; }
-          | arhimetic_expr LOWER_EQ arhimetic_expr_r { $$ = $1 <= $3; }
-          | arhimetic_expr GREATER_EQ arhimetic_expr_r { $$ = $1 >= $3; }
+          | arhimetic_operand GREATER arhimetic_operand { $$ = $1 > $3; }
+          | arhimetic_operand LOWER arhimetic_operand { $$ = $1 < $3; }
+          | arhimetic_operand EQUAL arhimetic_operand { $$ = $1 == $3; }
+          | arhimetic_operand NOT_EQ arhimetic_operand { $$ = $1 != $3; }
+          | arhimetic_operand LOWER_EQ arhimetic_operand { $$ = $1 <= $3; }
+          | arhimetic_operand GREATER_EQ arhimetic_operand { $$ = $1 >= $3; }
           ;
 
-arhimetic_operand : INCR ref_val { $$ = ++$2; }
-          | ref_val { $$ = $1; }
-          | ref_val INCR { $$ = $1++; }
-          | ref_val DECR { $$ = $1--; }
-          | DECR ref_val { $$ = --$2; }
-          | const_value { $$ = $1; } ;
-          | const_value INCR { $$ = $1++; }
-          | const_value DECR { $$ = $1--; }
-          | INCR const_value { $$ = ++$2; }
-          | DECR const_value { $$ = --$2; }
+numeric_val: ref_val { $$ = $1; }
           | function_call { $$ = $1; }
-          | function_call INCR { $$ = $1++; }
-          | function_call DECR { $$ = $1++; }
-          | INCR function_call { $$ = ++$2; }
-          | DECR function_call { $$ = --$2; }
-          ;
+          | const_value { $$ = $1; }
 
-arhimetic_expr_r: '(' arhimetic_expr ')' { $$ = $2; }
-          | arhimetic_expr { $$ = $1; }
+arhimetic_operand : numeric_val { $$ = $1; }
+          | arhimetic_operand INCR { $$ = $1++; }
+          | arhimetic_operand DECR { $$ = $1++; }
+          | INCR arhimetic_operand { $$ = ++$2; }
+          | DECR arhimetic_operand { $$ = --$2; }
+          | '(' arhimetic_expr ')' { $$ = $2; }
           ;
-
-// arhimetic_expr_l: '(' arhimetic_expr ')'
-//           | arhimetic_expr
-//           ;
 
 arhimetic_expr : arhimetic_operand { $$ = $1; }
-          | '(' arhimetic_expr ')' { $$ = $2; }
-          | arhimetic_expr ADD arhimetic_expr { $$ = $1 + $3; }
-          | arhimetic_expr MIN arhimetic_expr { $$ = $1 - $3; }
-          | arhimetic_expr MUL arhimetic_expr { $$ = $1 * $3; }
-          | arhimetic_expr DIV arhimetic_expr { $$ = $1 / $3; }
-          | arhimetic_expr MOD arhimetic_expr { $$ = $1 - (int)($1 / $3); }
-          // | '(' arhimetic_expr ADD arhimetic_expr ')' { $$ = $2 + $4; }
-          // | '(' arhimetic_expr MIN arhimetic_expr ')' { $$ = $2 - $4; }
-          // | '(' arhimetic_expr MUL arhimetic_expr ')' { $$ = $2 * $4; }
-          // | '(' arhimetic_expr DIV arhimetic_expr ')' { $$ = $2 / $4; }
-          // | '(' arhimetic_expr MOD arhimetic_expr ')' { $$ = $2 - (int)($2 / $4); }
+          | arhimetic_operand ADD arhimetic_operand { $$ = $1 + $3; }
+          | arhimetic_operand MIN arhimetic_operand { $$ = $1 - $3; }
+          | arhimetic_operand MUL arhimetic_operand { $$ = $1 * $3; }
+          | arhimetic_operand DIV arhimetic_operand { $$ = $1 / $3; }
+          | arhimetic_operand MOD arhimetic_operand { $$ = $1 - (int)($1 / $3); }
           ;
 
-expr : lo_expr { $$ = $1; }
-          | arhimetic_expr { $$ = $1; }
-          // | function_call
-          // | const_value { $$ = $1; }
-          // | ref_val { $$ = $1; }
+expr : arhimetic_expr { $$ = $1; }
           | calc_statement
           ;
 
