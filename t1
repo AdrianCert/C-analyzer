@@ -1,3 +1,4 @@
+int i;
 int ab=40;
 int ac=30;
 int s = ab+ac;

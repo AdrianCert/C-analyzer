@@ -203,9 +203,9 @@
 /**************** GLOBAL RULES ********************************/
 /**************************************************************/
 
-data_type : TRIVIAL_TIP            { strrec(tip,$1); fl_vsig = 0; }
-          | SIGN_TIP               { strrec(tip,$1); fl_vsig = 0; }
-          | TIP_SIGN SIGN_TIP      { strrec(tip,$2); fl_vsig = $1; }
+data_type : TRIVIAL_TIP            { $$ =strdup($1); fl_vsig = 0; }
+          | SIGN_TIP               { $$ =strdup($1); fl_vsig = 0; }
+          | TIP_SIGN SIGN_TIP      { $$ =strdup($2); fl_vsig = $1; }
           ;
 
 const_numeric_value : INT_VAL      { $$ = $1; }
@@ -230,6 +230,7 @@ variable_dec : data_type variable_idendifier ';'  {
                                                        int i;
                                                        for(i = 0; i < multiplev_count; i++)
                                                        {
+                                                            printf("Variable declararion %s", $1);
                                                             vdecrare($1, multiplev_name[i], scopename, 0, fl_vsig);
                                                             strrec(multiplev_name[i], "-");
                                                        }
@@ -239,12 +240,13 @@ variable_dec : data_type variable_idendifier ';'  {
                                                        int i;
                                                        for(i = 0; i < multiplev_count; i++)
                                                        {
+                                                            printf("Variable declararion %s %s", $2, multiplev_name[i]);
                                                             vdecrare($2, multiplev_name[i], scopename, 1, fl_vsig);
                                                             strrec(multiplev_name[i], "-");
                                                        }
                                                        multiplev_count = 0;
                                                   }
-          | data_type ID ASSIGN str_exp_val ';'        { vdecrare_init($1, $2, scopename, $4, 0, fl_vsig); }
+          | data_type ID ASSIGN str_exp_val ';'        {  printf("Vari"); fflush(stdout); printf("Variable declararion %s %s", $1, $2); vdecrare_init($1, $2, scopename, $4, 0, fl_vsig); }
           | CONST data_type ID ASSIGN str_exp_val ';'  { vdecrare_init($2, $3, scopename, $5, 0, fl_vsig); }
           ;
 
@@ -459,7 +461,7 @@ declarations :
 
 begin     : declarations { 
                               printf("program corect sintactic\n");
-                              printvtable("s_table.txt");
+                              //printvtable("s_table.txt");
                          }
           ;
 

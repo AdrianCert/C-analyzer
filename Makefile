@@ -10,7 +10,7 @@ remove:
 report:
 	@flex language.l
 	@bison --report all -d language.y
-	@gcc lex.yy.c language.tab.c -o language
+	@gcc -Wall lex.yy.c language.tab.c -o language
 	@rm -f lex.yy.c language.tab.c language.tab.h
 
 update:
