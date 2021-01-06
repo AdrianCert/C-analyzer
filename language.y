@@ -141,7 +141,9 @@
 %token RETURN IF ELSE WHILE DO FOR
 %token STRUCT CLASS ACCESMODIF
 
-%left OR AND NOT
+%left NOT
+%left AND
+%left OR
 %left MUL DIV MOD
 %left ADD MIN
 %left INCR DECR
@@ -268,29 +270,29 @@ while_statement: WHILE condition block
 /**************** IF RULES ************************************/
 /**************************************************************/
 
-if_statement : IF condition block
-          | IF condition block ELSE block 
+if_statement : IF condition block ELSE block
+          | IF condition block 
           ;
 
 /**************************************************************/
 /**************** EXPRESIONS RULES ****************************/
 /**************************************************************/
 
-lo_operand : BOOL_VAL { $$ = $1; }
-          | lo_expr;
+lo_operand : lo_expr;
+          | '(' lo_expr ')' { $$ = $2; }
           ;
 
 lo_expr : NOT lo_operand { $$ = !$2; }
           | lo_operand AND lo_operand { $$ = $1 && $3; }
           | lo_operand OR lo_operand { $$ = $1 || $3; }
           | lo_operand { $$ = $1; }
-          | '(' lo_expr ')' { $$ = $2; }
           | arhimetic_operand GREATER arhimetic_operand { $$ = $1 > $3; }
           | arhimetic_operand LOWER arhimetic_operand { $$ = $1 < $3; }
           | arhimetic_operand EQUAL arhimetic_operand { $$ = $1 == $3; }
           | arhimetic_operand NOT_EQ arhimetic_operand { $$ = $1 != $3; }
           | arhimetic_operand LOWER_EQ arhimetic_operand { $$ = $1 <= $3; }
           | arhimetic_operand GREATER_EQ arhimetic_operand { $$ = $1 >= $3; }
+          //| const_value
           ;
 
 numeric_val: ref_val { $$ = $1; }
