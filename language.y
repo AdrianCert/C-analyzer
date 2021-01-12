@@ -194,7 +194,7 @@ if_head : IF condition block ;
 
 if_statement : 
           if_head if_else
-          // | if_head
+          //| if_head
           ;
 
 /**************************************************************/
@@ -331,4 +331,4 @@ int main(int argc, char** argv)
      yyparse();
      printf("q program corect sintactic\n");
      return 0;
-} 
+}

@@ -20,5 +20,5 @@ update:
 	@rm -f lex.yy.c language.tab.c language.tab.h
 
 test:
-	@make report
+	@make -s report
 	@./language t1
