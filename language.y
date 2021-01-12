@@ -8,8 +8,10 @@
 %token EQUAL NOT_EQ LOWER_EQ GREATER_EQ GREATER LOWER
 %token EVAL CALC
 %token CONST STATIC PRINT PMEM
-%token RETURN IF ELSE WHILE DO FOR
+%token RETURN IF WHILE DO FOR
 %token STRUCT CLASS ACCESMODIF
+
+%right ELSE
 
 %left NOT
 %left AND
@@ -30,6 +32,7 @@
      CHAR_VAL
      STRING_VAL
      ID
+     ref_val
      const_string_value
      const_value
      str_exp_val
@@ -42,7 +45,6 @@
 %type <rnum> DOUBLE_VAL 
      arhimetic_expr
      expr
-     ref_val
      function_call
      calc_statement
      arhimetic_operand
@@ -74,14 +76,13 @@ const_value : const_string_value   { $$ = strdup($1); }
           | const_numeric_value    { printf("constant_numerc_value %lf\n", $1); sprintf( $$, "%lf", $1); }
           ;
 
-str_exp_val : expr                 { printf( "expr %lf\n", $1); sprintf( tmp, "%lf", $1); dprint("exit ok %c\n", '1');  $$ = strdup(tmp); }
+str_exp_val : expr                 { sprintf( tmp, "%lf", $1);  $$ = strdup(tmp); }
 
 variable_idendifier : ID           { multi_var_rec($1); }
           | variable_idendifier ',' ID { multi_var_rec($3); }
           ;
 
 variable_dec : data_type variable_idendifier ';'  {
-                                                       printf("variable delaration 1 %d\n", multi_var_count);
                                                        int i;
                                                        for(i = 0; i < multi_var_count; i++)
                                                        {
@@ -90,7 +91,6 @@ variable_dec : data_type variable_idendifier ';'  {
                                                        multi_var_count = 0;
                                                   }
           | CONST data_type variable_idendifier ';' {
-                                                       printf("variable delaration 2\n");
                                                        int i;
                                                        for(i = 0; i < multi_var_count; i++)
                                                        {
@@ -98,7 +98,7 @@ variable_dec : data_type variable_idendifier ';'  {
                                                        }
                                                        multi_var_count = 0;
                                                   }
-          | data_type ID ASSIGN str_exp_val ';'        { dprint("variable delaration %d\n", 2); dprint("str_expr %s\n", $4);vars_add($1, $2, $4, 0, fl_vsig); }
+          | data_type ID ASSIGN str_exp_val ';'        { vars_add($1, $2, $4, 0, fl_vsig); }
           | CONST data_type ID ASSIGN str_exp_val ';'  { vars_add($2, $3, $5, 1, fl_vsig); }
           ;
 
@@ -122,7 +122,7 @@ statement_list : statement
           | statement_list statement
           ;
 
-ref_val : ID { $$ = 0; } //call_get value;
+ref_val : ID { $$ = vars_get($1); }
           | ID PMEM ID { $$ = 0; } //call_get value;
           | ID '.' ID { $$ = 0; } //call_get value;
           ;
@@ -139,7 +139,7 @@ block : '{' statement_list '}'
            | statement
           ;
 
-asign_statement : ref_val ASSIGN expr ';'
+asign_statement : ref_val ASSIGN str_exp_val ';' { dprint("asign 234 %s %s",$1, $3); free($1); $1 = strdup($3);}
           | ref_val MUL_ASSIGN expr ';' 
           | ref_val MOD_ASSIGN expr ';' 
           | ref_val ADD_ASSIGN expr ';' 
@@ -151,7 +151,7 @@ asign_statement : ref_val ASSIGN expr ';'
 /**************** EVAL & CALC RULES ***************************/
 /**************************************************************/
 
-eval_statement : EVAL '(' '"' arhimetic_expr '"'')' ';' { printf("%lf", $4); }
+eval_statement : EVAL '(' '"' arhimetic_expr '"'')' ';' { dprint("eval %lf", $4); }
 
 calc_statement : CALC '(' '"' arhimetic_expr '"' ')' ';' { $$ = $4; }
 
@@ -214,11 +214,11 @@ lo_expr : NOT lo_expr { $$ = !$2; }
           | '(' lo_expr ')' { $$ = $2; }
           ;
 
-numeric_val: ref_val { $$ = $1; }
+numeric_val: ref_val { $$ = conv_doble($1); }
           | function_call { $$ = $1; }
           | const_numeric_value { $$ = $1; }
 
-arhimetic_operand : numeric_val { $$ = $1; }
+arhimetic_operand : numeric_val { $$ = $1; dprint("Op 223 %lf\n", $1); }
           | arhimetic_operand INCR { $$ = $1++; }
           | arhimetic_operand DECR { $$ = $1++; }
           | INCR arhimetic_operand { $$ = ++$2; }
@@ -226,15 +226,17 @@ arhimetic_operand : numeric_val { $$ = $1; }
           | '(' arhimetic_expr ')' { $$ = $2; }
           ;
 
-arhimetic_expr : arhimetic_operand { $$ = $1; }
-          | arhimetic_operand ADD arhimetic_operand { $$ = $1 + $3; }
+arhimetic_expr :
+           arhimetic_operand ADD arhimetic_operand { $$ = $1 + $3; dprint("Op 232 %lf %lf\n", $1 , $3);}
           | arhimetic_operand MIN arhimetic_operand { $$ = $1 - $3; }
           | arhimetic_operand MUL arhimetic_operand { $$ = $1 * $3; }
           | arhimetic_operand DIV arhimetic_operand { $$ = $1 / $3; }
           | arhimetic_operand MOD arhimetic_operand { $$ = $1 - (int)($1 / $3); }
+          | arhimetic_operand { $$ = $1; }
           ;
 
-expr : arhimetic_expr { $$ = $1; }
+expr : arhimetic_expr { $$ = $1; dprint("opr %lf\n", $1); }
+          /* | arhimetic_operand { $$ = $1; } */
           | calc_statement
           ;
 
@@ -327,6 +329,6 @@ int main(int argc, char** argv)
      vars           = (struct vartable*)malloc(MAXVAR * sizeof(struct vartable));
      yyin           = fopen(argv[1],"r");
      yyparse();
-     printf("program corect sintactic\n");
+     printf("q program corect sintactic\n");
      return 0;
 } 

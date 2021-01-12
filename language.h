@@ -47,6 +47,13 @@ char *tip = 0;
 
 char tmp[250];
 
+double conv_doble(char *s)
+{
+    char ** tmp = 0;
+    double r = strtod(s,tmp);
+    return r;
+}
+
 /**************************************************************/
 /**************** SCOPE MANAGE FUNC ***************************/
 /**************************************************************/
@@ -101,19 +108,44 @@ int vars_count = 0;
 
 int var_exist(char *v, struct scope * s)
 {
-    // int i;
-    // for (i = 0; i < cvar; i++)
-    // {
-    //     if (scopedeep <= variable[i].dscope)
-    //     {
-    //         if (strcmp(variable[i].name, vname) == 0)
-    //         {
-    //             return i;
-    //         }
-    //     }
-    // }
-    // return lina la care s-a definit;
+    struct scope *d[100];
+    struct scope *it = s;
+
+    int scope_count = 0;
+    do {
+        d[scope_count++] = it;
+        it = it->parent;
+    } while(it);
+
+    int i, j;
+    for(i = 0; i < vars_count; i++)
+    {
+        if (strcmp(vars[i].name, v) == 0)
+        {
+            for(j = 0; j < scope_count; i++)
+            {
+                if(s == d[j])
+                {
+                    return vars[i].defined_line;
+                }
+            }
+        }
+    }
+
     return -1;
+}
+
+char *vars_get(char *id)
+{
+    int var_location = var_exist(id, current_scope);
+
+    if(var_location == -1)
+    {
+        printf("[%d error]Variable '%s' is not define\n", yylineno, id);
+        exit(0);
+    }
+
+    return vars[var_location].value;
 }
 
 void vars_add(char *type, char *name, char *value, int cnst, int sgn)
@@ -121,7 +153,7 @@ void vars_add(char *type, char *name, char *value, int cnst, int sgn)
     int i;
     if ((i = var_exist(name, current_scope)) >= 0)
     {
-        printf("Variable (%s)%s is already defined at line %d", type, name, i);
+        printf("Variable (%s)%s is already defined at line %d\n", type, name, i);
         exit(0);
     }
     if (cnst && !value)
@@ -150,10 +182,30 @@ void vars_print(char *path)
         exit(0);
     }
 
+    char *tab_header = strdup("%-10s %-10s %-10s %-10s %-10s %-5s %-5s %-10s\n");
+    char *tab_format = strdup("%-10s %-10s %-10s %-10s %-10d %-5d %-5d %-10d\n");
+    fprintf(file, tab_header,
+                "type",
+                "name",
+                "value",
+                "scope",
+                "scope_lvl",
+                "sign",
+                "const",
+                "defined line"
+            );
+
     for (i = 0; i < vars_count; i++)
     {
-        fprintf(file,
-                "%s %s %s %s %d %d %d %d",
+        // dprint("val %d %s\n", 1 ,vars[i].type);
+        // dprint("val %d %s\n", 2 ,vars[i].name);
+        // dprint("val %d %s\n", 3 ,vars[i].value);
+        // dprint("val %d %s\n", 4 ,vars[i].scope->name);
+        // dprint("val %d %d\n", 5 ,vars[i].scope->level);
+        // dprint("val %d %d\n", 6 ,vars[i].fl_sign);
+        // dprint("val %d %d\n", 7 ,vars[i].fl_const);
+        // dprint("val %d %d\n", 8 ,vars[i].defined_line);
+        fprintf(file, tab_format,
                 vars[i].type,
                 vars[i].name,
                 vars[i].value,

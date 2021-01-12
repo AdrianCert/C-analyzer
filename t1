@@ -1,4 +1,3 @@
 int i;
-int ab=40;
-int ac=30;
-int s = ab+ac;
+int a=40;
+int b = (1+2);
