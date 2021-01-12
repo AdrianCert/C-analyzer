@@ -1,156 +1,10 @@
 %{
-     #include <stdio.h>
-     #include <stdlib.h>
-     #include <string.h>
-
-     #define MAXVAR 500
-     int yylex();
-
-     extern FILE * yyin;
-     extern char * yytext;
-     extern int yylineno;
-
-     struct vartable {
-          char *type;
-          char *name;
-          char *value;
-          char *scope;
-          int dscope;
-          int fl_defined;
-          int fl_sign;
-          int fl_const;
-          int defined_line;
-     };
-
-     struct functtable {
-          char type[25];
-          char name[250];
-          char parmlist[1250];
-     };
-
-     struct vartable variable[MAXVAR];
-     struct functtable functions[MAXVAR];
-     int cvar = 0;
-     int cfun = 0;
-
-     int fl_main = 0;
-     int sc_curr = 0;
-
-     int fl_vsig;
-     int fl_var_const;
-     
-     int scopedeep = 0;
-     char * scopename;
-
-     char * indentifer_val;
-     char * tip = 0;
-     char * multiplev_name[10]; 
-     int multiplev_count = 0;
-     int declaredvar(char * vname)
-     {
-          int i;
-          for(i = 0; i < cvar; i++)
-          {
-               if(scopedeep <= variable[i].dscope)
-               {
-                    if( strcmp(variable[i].name, vname) == 0)
-                    {
-                         return i;
-                    }
-               }
-          }
-          return -1;
-     }
-
-     void vdecrare_init(char *type, char *name, char *scope, char *value, int cnst, int sgn )
-     {
-          int i;
-          if((i = declaredvar(name) ) >= 0)
-          {
-               printf("Variable (%s)%s is already defined at line %d", type, name, variable[i].defined_line);
-               exit(0);
-          }
-
-          variable[cvar].type = strdup(type);
-          variable[cvar].name = strdup(name);
-          variable[cvar].value = strdup(value);
-          variable[cvar].scope = strdup(scopename);
-          variable[cvar].dscope = scopedeep;
-          variable[cvar].fl_defined = 1;
-          variable[cvar].fl_const = cnst ? 1 : 0;
-          variable[cvar].fl_sign = sgn ? 1 : 0;
-          variable[cvar].defined_line = yylineno;
-          cvar++;
-     }
-
-     void vdecrare(char *type, char *name, char *scope, int cnst, int sgn)
-     {
-          int i;
-          if((i = declaredvar(name) ) >= 0)
-          {
-               printf("Variable %s is already defined at line %d", name, variable[i].defined_line);
-               exit(0);
-          }
-          if(cnst)
-          {
-               printf("Variable is not allow define const without initalization\n");
-               exit(0);
-          }
-
-          variable[cvar].type = strdup(type);
-          variable[cvar].name = strdup(name);
-          variable[cvar].scope = strdup(scopename);
-          variable[cvar].dscope = scopedeep;
-          variable[cvar].fl_defined = 0;
-          variable[cvar].fl_const = cnst ? 1 : 0;
-          variable[cvar].fl_sign = sgn ? 1 : 0;
-          variable[cvar].defined_line = yylineno;
-          cvar++;
-     }
-
-     void printvtable(char *path)
-     {
-          FILE * file;
-          int i;
-
-          if (!(file = fopen(path, "w")))
-          {
-               exit(0);
-          }
-
-          for( i = 0; i < cvar; i++)
-          {
-               fprintf(file,
-                    "%s %s %s %s %d %d %d %d %d" ,
-                    variable[i].type,
-                    variable[i].name,
-                    variable[i].value,
-                    variable[i].scope,
-                    variable[i].dscope,
-                    variable[i].fl_defined,
-                    variable[i].fl_sign,
-                    variable[i].fl_const,
-                    variable[i].defined_line );
-          }
-
-          fclose(file);
-     }
-
-     void strrec( char *d, char *s)
-     {
-          if(d) free(d);
-          d = strdup(s);
-     }
-     void yyerror(char * s)
-     {
-          printf("eroare: %s la linia:%d\n",s,yylineno);
-     }
-
+     #include "language.h"
 %}
 
-%token SIGN_TIP TRIVIAL_TIP TIP_SIGN ID 
 %token CHAR_VAL STRING_VAL INT_VAL DOUBLE_VAL
 %token ASSIGN MUL_ASSIGN MOD_ASSIGN ADD_ASSIGN MIN_ASSIGN DIV_ASSIGN
+%token SIGN_TIP TRIVIAL_TIP TIP_SIGN ID
 %token EQUAL NOT_EQ LOWER_EQ GREATER_EQ GREATER LOWER
 %token EVAL CALC
 %token CONST STATIC PRINT PMEM
@@ -217,37 +71,35 @@ const_string_value : CHAR_VAL      { $$ = strdup($1); }
           ;
 
 const_value : const_string_value   { $$ = strdup($1); }
-          | const_numeric_value    { sprintf( $$, "%lf", $1); }
+          | const_numeric_value    { printf("constant_numerc_value %lf\n", $1); sprintf( $$, "%lf", $1); }
           ;
 
-str_exp_val : expr                 { sprintf( $$, "%lf", $1); }
+str_exp_val : expr                 { printf( "expr %lf\n", $1); sprintf( tmp, "%lf", $1); dprint("exit ok %c\n", '1');  $$ = strdup(tmp); }
 
-variable_idendifier : ID           { strrec(multiplev_name[multiplev_count++], $1); }
-          | variable_idendifier ',' ID { strrec(multiplev_name[multiplev_count++], $3); }
+variable_idendifier : ID           { multi_var_rec($1); }
+          | variable_idendifier ',' ID { multi_var_rec($3); }
           ;
 
 variable_dec : data_type variable_idendifier ';'  {
+                                                       printf("variable delaration 1 %d\n", multi_var_count);
                                                        int i;
-                                                       for(i = 0; i < multiplev_count; i++)
+                                                       for(i = 0; i < multi_var_count; i++)
                                                        {
-                                                            printf("Variable declararion %s", $1);
-                                                            vdecrare($1, multiplev_name[i], scopename, 0, fl_vsig);
-                                                            strrec(multiplev_name[i], "-");
+                                                            vars_add($1, multi_var[i], 0, 0, fl_vsig);
                                                        }
-                                                       multiplev_count = 0;
+                                                       multi_var_count = 0;
                                                   }
           | CONST data_type variable_idendifier ';' {
+                                                       printf("variable delaration 2\n");
                                                        int i;
-                                                       for(i = 0; i < multiplev_count; i++)
+                                                       for(i = 0; i < multi_var_count; i++)
                                                        {
-                                                            printf("Variable declararion %s %s", $2, multiplev_name[i]);
-                                                            vdecrare($2, multiplev_name[i], scopename, 1, fl_vsig);
-                                                            strrec(multiplev_name[i], "-");
+                                                            vars_add($2, multi_var[i], 0, 1, fl_vsig);
                                                        }
-                                                       multiplev_count = 0;
+                                                       multi_var_count = 0;
                                                   }
-          | data_type ID ASSIGN str_exp_val ';'        {  printf("Vari"); fflush(stdout); printf("Variable declararion %s %s", $1, $2); vdecrare_init($1, $2, scopename, $4, 0, fl_vsig); }
-          | CONST data_type ID ASSIGN str_exp_val ';'  { vdecrare_init($2, $3, scopename, $5, 0, fl_vsig); }
+          | data_type ID ASSIGN str_exp_val ';'        { dprint("variable delaration %d\n", 2); dprint("str_expr %s\n", $4);vars_add($1, $2, $4, 0, fl_vsig); }
+          | CONST data_type ID ASSIGN str_exp_val ';'  { vars_add($2, $3, $5, 1, fl_vsig); }
           ;
 
 statement : variable_dec
@@ -358,6 +210,7 @@ lo_expr : NOT lo_expr { $$ = !$2; }
           | arhimetic_operand NOT_EQ arhimetic_operand { $$ = $1 != $3; }
           | arhimetic_operand LOWER_EQ arhimetic_operand { $$ = $1 <= $3; }
           | arhimetic_operand GREATER_EQ arhimetic_operand { $$ = $1 >= $3; }
+          /* | numeric_val { $$ = $1; } */
           | '(' lo_expr ')' { $$ = $2; }
           ;
 
@@ -461,6 +314,7 @@ declarations :
 
 begin     : declarations { 
                               printf("program corect sintactic\n");
+                              vars_print("s_table.txt");
                               //printvtable("s_table.txt");
                          }
           ;
@@ -469,7 +323,10 @@ begin     : declarations {
 
 int main(int argc, char** argv)
 {
-     scopename = strdup("GLOBAL");
-     yyin=fopen(argv[1],"r");
+     current_scope  = scope_init("GLOBAL", 0);
+     vars           = (struct vartable*)malloc(MAXVAR * sizeof(struct vartable));
+     yyin           = fopen(argv[1],"r");
      yyparse();
+     printf("program corect sintactic\n");
+     return 0;
 } 

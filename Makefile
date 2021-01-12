@@ -15,6 +15,10 @@ report:
 
 update:
 	@flex language.l
-	@bison --report all --update -d language.y
+	@bison --report all -t -d language.y
 	@gcc lex.yy.c language.tab.c -o language
 	@rm -f lex.yy.c language.tab.c language.tab.h
+
+test:
+	@make report
+	@./language t1
