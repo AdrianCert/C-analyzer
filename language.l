@@ -16,6 +16,10 @@
 ("private"|"protected"|"public")    { yylval.str = strdup(yytext); return ACCESMODIF;}
 "signed"                { yylval.num = 1; return TIP_SIGN;}
 "unsigned"              { yylval.num = 0; return TIP_SIGN;}
+(0|[1-9][0-9]*)         {
+                            yylval.num = atoi(yytext);
+                            return POZ_VAL;
+                        }
 ([0-9]*[.])?[0-9]+      {
                             char *real, *zecim, *ch = strdup(yytext);
 
@@ -29,10 +33,12 @@
                             yylval.rnum += (double)atoi(zecim) / k;
                             return DOUBLE_VAL;
                         }
+
 (0|[+-]?[1-9][0-9]*)    {
                             yylval.num = atoi(yytext);
                             return INT_VAL;
                         }
+
 "="                     { return ASSIGN; }
 "*="                    { return MUL_ASSIGN; }
 "%="                    { return MOD_ASSIGN; }

@@ -144,7 +144,7 @@ char *vars_get(char *id)
         printf("[%d error]Variable '%s' is not define\n", yylineno, id);
         exit(0);
     }
-
+    dprint("vars get %s\n", vars[var_location].value);
     return vars[var_location].value;
 }
 

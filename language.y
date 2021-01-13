@@ -2,7 +2,7 @@
      #include "language.h"
 %}
 
-%token CHAR_VAL STRING_VAL INT_VAL DOUBLE_VAL
+%token CHAR_VAL STRING_VAL INT_VAL DOUBLE_VAL POZ_VAL
 %token ASSIGN MUL_ASSIGN MOD_ASSIGN ADD_ASSIGN MIN_ASSIGN DIV_ASSIGN
 %token SIGN_TIP TRIVIAL_TIP TIP_SIGN ID
 %token EQUAL NOT_EQ LOWER_EQ GREATER_EQ GREATER LOWER
@@ -39,6 +39,7 @@
      data_type
 
 %type <num> TIP_SIGN
+     POZ_VAL
      INT_VAL
      lo_expr
 
@@ -77,9 +78,16 @@ const_value : const_string_value   { $$ = strdup($1); }
           ;
 
 str_exp_val : expr                 { sprintf( tmp, "%lf", $1);  $$ = strdup(tmp); }
+          ;
+
+dimensiune: '[' INT_VAL ']'
+          | dimensiune '[' INT_VAL ']'
+          ;
 
 variable_idendifier : ID           { multi_var_rec($1); }
+          | ID dimensiune
           | variable_idendifier ',' ID { multi_var_rec($3); }
+          | variable_idendifier ',' ID dimensiune
           ;
 
 variable_dec : data_type variable_idendifier ';'  {
@@ -216,7 +224,7 @@ lo_expr : NOT lo_expr { $$ = !$2; }
 
 numeric_val: ref_val { $$ = conv_doble($1); }
           | function_call { $$ = $1; }
-          | const_numeric_value { $$ = $1; }
+          | const_numeric_value { $$ = $1; dprint("219 %lf", $1); }
 
 arhimetic_operand : numeric_val { $$ = $1; dprint("Op 223 %lf\n", $1); }
           | arhimetic_operand INCR { $$ = $1++; }
@@ -232,7 +240,7 @@ arhimetic_expr :
           | arhimetic_operand MUL arhimetic_operand { $$ = $1 * $3; }
           | arhimetic_operand DIV arhimetic_operand { $$ = $1 / $3; }
           | arhimetic_operand MOD arhimetic_operand { $$ = $1 - (int)($1 / $3); }
-          | arhimetic_operand { $$ = $1; }
+          | arhimetic_operand { $$ = $1; dprint("235 %lf\n", $1); }
           ;
 
 expr : arhimetic_expr { $$ = $1; dprint("opr %lf\n", $1); }
